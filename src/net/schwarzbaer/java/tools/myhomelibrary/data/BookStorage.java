@@ -14,6 +14,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 import net.schwarzbaer.java.tools.myhomelibrary.FileIO;
 import net.schwarzbaer.java.tools.myhomelibrary.FileIO.FileIOException;
@@ -92,32 +93,30 @@ public class BookStorage
 		
 		book.bookSeries = bookSeries;
 		
-		if (!book.bookSeries.books.contains(book))
+		if (book.bookSeries!=null && !book.bookSeries.books.contains(book))
 			book.bookSeries.books.add(book);
 	}
 
 	public Book createBook()
 	{
-		return createBook(bookIDs.createNew());
-	}
-
-	private Book createBook(String id)
-	{
-		Book book = new Book(id);
-		books.put(id, book);
-		return book;
+		return createIdBased(books, Book::new, bookIDs);
 	}
 	
 	public BookSeries createBookSeries()
 	{
-		return createBookSeries(bookSeriesIDs.createNew());
+		return createIdBased(bookSeries, BookSeries::new, bookSeriesIDs);
 	}
-
-	private BookSeries createBookSeries(String id)
+	
+	private <V extends UniqueID.IdBased<V>> V createIdBased(Map<String,V> map, Function<String,V> constructor, UniqueID idSource)
 	{
-		BookSeries bookSeries = new BookSeries(id);
-		this.bookSeries.put(id, bookSeries);
-		return bookSeries;
+		return createIdBased(map, constructor, idSource.createNew());
+	}
+	
+	private <V extends UniqueID.IdBased<V>> V createIdBased(Map<String,V> map, Function<String,V> constructor, String id)
+	{
+		V value = constructor.apply(id);
+		map.put(id, value);
+		return value;
 	}
 	
 	public Author getOrCreateAuthor(String name)
@@ -221,14 +220,14 @@ public class BookStorage
 					{
 						bookSeriesIDs.addKnownID(valueStr);
 						currentBook = null;
-						currentBookSeries = createBookSeries(valueStr);
+						currentBookSeries = createIdBased(bookSeries, BookSeries::new, valueStr);
 						allBookLists.put(valueStr, currentBookList = new ArrayList<>());
 						expectingBookSeries = false;
 					}
 					else if (expectingBook)
 					{
 						bookIDs.addKnownID(valueStr);
-						currentBook = createBook(valueStr);
+						currentBook = createIdBased(books, Book::new, valueStr);
 						currentBookSeries = null;
 						currentBookList = null;
 						expectingBook = false;
@@ -330,26 +329,26 @@ public class BookStorage
 		try (PrintWriter out = new PrintWriter(file, StandardCharsets.UTF_8))
 		{
 			bookSeries.values().stream().sorted().forEach(bs -> {
-				System.out.println(HEADER_BOOK_SERIES);
-				System.out.printf("%s = %s%n", Field.ID, bs.id);
-				if (bs.name!=null)    System.out.printf("%s = %s%n", Field.name, bs.name);
-				bs.books.forEach(b -> System.out.printf("%s = %s%n", Field.book, b.id   ));
-				System.out.println();
+				out.println(HEADER_BOOK_SERIES);
+				out.printf("%s = %s%n", Field.ID, bs.id);
+				if (bs.name!=null)    out.printf("%s = %s%n", Field.name, bs.name);
+				bs.books.forEach(b -> out.printf("%s = %s%n", Field.book, b.id   ));
+				out.println();
 			});
 			
 			books.values().stream().sorted().forEach(b -> {
-				System.out.println(HEADER_BOOK);
-				System.out.printf("%s = %s%n", Field.ID, b.id);
-				if (b.title      !=null) System.out.printf("%s = %s%n", Field.title      , b.title        );
-				if (b.bookSeries !=null) System.out.printf("%s = %s%n", Field.bookSeries , b.bookSeries.id);
-				b.authors.forEach(a ->   System.out.printf("%s = %s%n", Field.author     , a.name()       ));
-				if (b.releaseYear>0    ) System.out.printf("%s = %d%n", Field.releaseYear, b.releaseYear  );
-				if (b.publisher  !=null) System.out.printf("%s = %s%n", Field.publisher  , b.publisher    );
-				if (b.catalogID  !=null) System.out.printf("%s = %s%n", Field.catalogID  , b.catalogID    );
-				if (b.frontCover !=null) System.out.printf("%s = %s%n", Field.frontCover , b.frontCover   );
-				if (b.spineCover !=null) System.out.printf("%s = %s%n", Field.spineCover , b.spineCover   );
-				if (b.backCover  !=null) System.out.printf("%s = %s%n", Field.backCover  , b.backCover    );
-				System.out.println();
+				out.println(HEADER_BOOK);
+				out.printf("%s = %s%n", Field.ID, b.id);
+				if (b.title      !=null) out.printf("%s = %s%n", Field.title      , b.title        );
+				if (b.bookSeries !=null) out.printf("%s = %s%n", Field.bookSeries , b.bookSeries.id);
+				b.authors.forEach(a ->   out.printf("%s = %s%n", Field.author     , a.name()       ));
+				if (b.releaseYear>0    ) out.printf("%s = %d%n", Field.releaseYear, b.releaseYear  );
+				if (b.publisher  !=null) out.printf("%s = %s%n", Field.publisher  , b.publisher    );
+				if (b.catalogID  !=null) out.printf("%s = %s%n", Field.catalogID  , b.catalogID    );
+				if (b.frontCover !=null) out.printf("%s = %s%n", Field.frontCover , b.frontCover   );
+				if (b.spineCover !=null) out.printf("%s = %s%n", Field.spineCover , b.spineCover   );
+				if (b.backCover  !=null) out.printf("%s = %s%n", Field.backCover  , b.backCover    );
+				out.println();
 			});
 			
 			System.out.printf("... done%n");

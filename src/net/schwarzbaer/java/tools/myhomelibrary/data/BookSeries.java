@@ -1,5 +1,6 @@
 package net.schwarzbaer.java.tools.myhomelibrary.data;
 
+import java.util.Objects;
 import java.util.Vector;
 
 public class BookSeries implements UniqueID.IdBased<BookSeries>
@@ -10,7 +11,7 @@ public class BookSeries implements UniqueID.IdBased<BookSeries>
 	
 	BookSeries(String id)
 	{
-		this.id = id;
+		this.id = Objects.requireNonNull( id );
 		books = new Vector<>();
 	}
 
@@ -18,5 +19,11 @@ public class BookSeries implements UniqueID.IdBased<BookSeries>
 	public String getID()
 	{
 		return id;
+	}
+
+	@Override
+	public String toString()
+	{
+		return name==null || name.isBlank() ? "<nameless book series>" : name;
 	}
 }

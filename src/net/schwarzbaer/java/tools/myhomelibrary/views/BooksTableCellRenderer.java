@@ -98,6 +98,17 @@ class BooksTableCellRenderer implements TableCellRenderer
 		return font.deriveFont(font.getSize2D() * value);
 	}
 
+	static ColumnID getColumnID(Book.Field field)
+	{
+		if (InfoBlock1.showsField(field))
+			return ColumnID.BookInfo1;
+		if (InfoBlock2.showsField(field))
+			return ColumnID.BookInfo2;
+		if (field==Book.Field.FrontCover)
+			return ColumnID.BookCover;
+		return null;
+	}
+
 	private static class InfoBlock1 extends JPanel
 	{
 		private static final long serialVersionUID = -3584565062346788798L;
@@ -136,6 +147,11 @@ class BooksTableCellRenderer implements TableCellRenderer
 					},
 					this::setBackground
 			);
+		}
+
+		static boolean showsField(Book.Field field)
+		{
+			return field==Book.Field.Title || field==Book.Field.Authors || field==Book.Field.BookSeries;
 		}
 
 		public void setData(Book book)
@@ -185,6 +201,11 @@ class BooksTableCellRenderer implements TableCellRenderer
 					},
 					this::setBackground
 			);
+		}
+
+		public static boolean showsField(Book.Field field)
+		{
+			return field==Book.Field.Publisher || field==Book.Field.CatalogID || field==Book.Field.ReleaseYear;
 		}
 
 		public void setData(Book book)

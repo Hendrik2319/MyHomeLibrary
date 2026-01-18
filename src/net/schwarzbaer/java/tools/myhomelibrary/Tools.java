@@ -4,18 +4,17 @@ import java.awt.Color;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.IntConsumer;
 import java.util.function.IntPredicate;
 import java.util.function.Predicate;
-import java.util.function.Supplier;
 
-import javax.swing.DefaultComboBoxModel;
 import javax.swing.JButton;
-import javax.swing.JComboBox;
 import javax.swing.JTextField;
+import javax.swing.SwingUtilities;
 
 import net.schwarzbaer.java.lib.gui.GeneralIcons;
 
@@ -42,6 +41,14 @@ public class Tools
 		if (n1==3 && n2!=13) return "%drd".formatted(n);
 		
 		return "%dth".formatted(n);
+	}
+
+	public static <V> List<V> addNull(List<V> list)
+	{
+		List<V> resultList = new ArrayList<>();
+		resultList.add(null);
+		resultList.addAll(list);
+		return resultList;
 	}
 
 	public static <V> V getIfNotNull(V value, V replacement)
@@ -82,42 +89,6 @@ public class Tools
 			ignoreInputEvents = false;
 			this.defaultTextFieldForeground = defaultTextFieldForeground;
 			this.defaultTextFieldBackground = defaultTextFieldBackground;
-			
-		}
-		
-		public <V> void configureEditableComboBox(JComboBox<V> cmbbx, Class<V> classV, Supplier<List<V>> getValues, Consumer<V> setValue, Consumer<String> addNewValueAndSet)
-		{
-			DefaultComboBoxModel<V> model = new DefaultComboBoxModel<>();
-			model.addAll(getValues.get());
-			cmbbx.setModel(model);
-			
-			cmbbx.setEditable(true);
-			cmbbx.addActionListener(e -> {
-				if (ignoreInputEvents) return;
-				
-				Object selectedItem = cmbbx.getSelectedItem();
-				if (selectedItem==null)
-				{
-					setValue.accept(null);
-					return;
-				}
-				
-				if (classV.isInstance(selectedItem))
-				{
-					V selectedValue = classV.cast(selectedItem);
-					setValue.accept(selectedValue);
-					return;
-				}
-				
-				if ("comboBoxEdited".equals(cmbbx.getActionCommand()) && selectedItem instanceof String selectedStr)
-				{
-					addNewValueAndSet.accept(selectedStr);
-					ignoreInputEvents = true;
-					model.removeAllElements();
-					model.addAll(getValues.get());
-					ignoreInputEvents = false;
-				}
-			});
 		}
 
 		public void configureOutputField(JTextField field)
@@ -140,7 +111,7 @@ public class Tools
 			field.addActionListener(e -> {
 				if (ignoreInputEvents) return;
 				
-				field.setForeground(defaultTextFieldForeground);
+				SwingUtilities.invokeLater(()->field.setForeground(defaultTextFieldForeground));
 				String text = field.getText();
 				
 				V value;
@@ -148,13 +119,13 @@ public class Tools
 				catch (Exception ex)
 				{
 					//ex.printStackTrace();
-					System.err.printf("%s while editing text field: %s%n", ex.getClass().getCanonicalName(), ex.getMessage());
+					//System.err.printf("%s while editing text field: %s%n", ex.getClass().getCanonicalName(), ex.getMessage());
 					value = null;
 				}
 				
 				if (value==null || (isOK!=null && !isOK.test(value)))
 				{
-					field.setBackground(Color.RED);
+					SwingUtilities.invokeLater(()->field.setBackground(Color.RED));
 					return;
 				}
 				

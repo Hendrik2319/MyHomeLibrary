@@ -5,6 +5,7 @@ import javax.swing.UnsupportedLookAndFeelException;
 
 import net.schwarzbaer.java.lib.system.Settings;
 import net.schwarzbaer.java.tools.myhomelibrary.data.BookStorage;
+import net.schwarzbaer.java.tools.myhomelibrary.data.Notifier;
 import net.schwarzbaer.java.tools.myhomelibrary.views.MainWindow;
 
 public class MyHomeLibrary
@@ -20,9 +21,11 @@ public class MyHomeLibrary
 	public final static AppSettings appSettings = new AppSettings();
 	public final MainWindow mainWindow;
 	public final BookStorage bookStorage;
+	public final Notifier notifier;
 
 	private MyHomeLibrary()
 	{
+		notifier = new Notifier();
 		bookStorage = new BookStorage(this);
 		mainWindow = new MainWindow(this);
 	}
@@ -30,6 +33,7 @@ public class MyHomeLibrary
 	private void initialize()
 	{
 		bookStorage.readFromFile();
+		notifier.storages.bookStorageLoaded(this);
 	}
 	
 	public static class AppSettings extends Settings.DefaultAppSettings<AppSettings.ValueGroup, AppSettings.ValueKey>

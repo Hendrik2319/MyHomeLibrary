@@ -3,6 +3,7 @@ package net.schwarzbaer.java.tools.myhomelibrary.views;
 import java.awt.Dimension;
 import java.awt.image.BufferedImage;
 import java.util.List;
+import java.util.Set;
 
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
@@ -104,6 +105,23 @@ public class BooksTable extends JTable
 			}
 			
 			return null;
+		}
+
+		void fireColumnUpdateForFields(Set<Book.Field> fields)
+		{
+			fields
+				.stream()
+				.map(BooksTableCellRenderer::getColumnID)
+				.filter(id -> id!=null)
+				.distinct()
+				.forEach(this::fireTableColumnUpdate);
+		}
+
+		void fireColumnUpdateForField(Book.Field field)
+		{
+			ColumnID columnID = BooksTableCellRenderer.getColumnID(field);
+			if (columnID!=null)
+				fireTableColumnUpdate(columnID);
 		}
 	}
 }

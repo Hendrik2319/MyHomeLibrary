@@ -6,22 +6,26 @@ import java.awt.GridBagLayout;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
+import java.util.Objects;
 
 import javax.imageio.ImageIO;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
-import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
 
 import net.schwarzbaer.java.lib.gui.ImageView;
+import net.schwarzbaer.java.lib.gui.Tables;
 import net.schwarzbaer.java.tools.myhomelibrary.FileIO;
 import net.schwarzbaer.java.tools.myhomelibrary.FileIO.FileIOException;
 import net.schwarzbaer.java.tools.myhomelibrary.Tools;
 import net.schwarzbaer.java.tools.myhomelibrary.data.Book;
+import net.schwarzbaer.java.tools.myhomelibrary.data.Book.Field;
 import net.schwarzbaer.java.tools.myhomelibrary.data.BookSeries;
 import net.schwarzbaer.java.tools.myhomelibrary.data.BookStorage;
+import net.schwarzbaer.java.tools.myhomelibrary.data.Notifier;
 import net.schwarzbaer.java.tools.myhomelibrary.data.Publisher;
 
 class BookPanel extends JPanel
@@ -37,8 +41,8 @@ class BookPanel extends JPanel
 	private final JButton btnAddAuthor;
 	private final JButton btnEditAuthors;
 	private final JButton btnChangeBSPos;
-	private final JComboBox<BookSeries> cmbbxBookSeries;
-	private final JComboBox<Publisher> cmbbxPublisher;
+	private final BookSeriesComboBox cmbbxBookSeries;
+	private final PublisherComboBox cmbbxPublisher;
 	private final JLabel labID;
 	private final JLabel labTitle;
 	private final JLabel labAuthors;
@@ -49,13 +53,15 @@ class BookPanel extends JPanel
 	private final CoverImagesPanel coverImagesPanel;
 	private final Tools.GUIConfigurator guiConfigurator;
 	private final BookStorage bookStorage;
+	private final Notifier notifier;
 	
 	private Book currentBook;
 
-	BookPanel(BookStorage bookStorage)
+	BookPanel(BookStorage bookStorage, Notifier notifier)
 	{
 		super(new GridBagLayout());
-		this.bookStorage = bookStorage;
+		this.bookStorage = Objects.requireNonNull( bookStorage );
+		this.notifier    = Objects.requireNonNull( notifier    );
 		currentBook = null;
 		
 		setBorder(BorderFactory.createEmptyBorder(3,3,3,3));
@@ -70,6 +76,7 @@ class BookPanel extends JPanel
 		
 		fldAuthors = new JTextField();
 		fldBookSeriesPos = new JTextField();
+		fldBookSeriesPos.setHorizontalAlignment(JTextField.CENTER);
 		
 		btnAddAuthor   = Tools.createButton("Add", true, null, e->{
 			// TODO Auto-generated method stub (btnAddAuthor)
@@ -81,35 +88,15 @@ class BookPanel extends JPanel
 			// TODO Auto-generated method stub (btnChangeBSPos)
 		});
 		
-		cmbbxBookSeries = new JComboBox<>();
-		cmbbxPublisher = new JComboBox<>();
+		cmbbxBookSeries = new BookSeriesComboBox();
+		cmbbxPublisher = new PublisherComboBox();
 		
 		guiConfigurator = new Tools.GUIConfigurator( fldTitle.getForeground(), fldTitle.getBackground() );
-		guiConfigurator.configureStringField(fldTitle      , str -> !str.isBlank(), str -> Tools.doIfNotNull(currentBook, b -> b.title     = str));
-		guiConfigurator.configureStringField(fldCatalogID  , null                 , str -> Tools.doIfNotNull(currentBook, b -> b.catalogID = str));
-		guiConfigurator.configureIntField   (fldReleaseYear, n -> n>0             , n   -> Tools.doIfNotNull(currentBook, b -> b.releaseYear = n));
+		guiConfigurator.configureStringField(fldTitle      , str -> !str.isBlank(), str -> Tools.doIfNotNull(currentBook, b -> { b.title     = str; this.notifier.books.fieldChanged(this, b, Field.Title      ); }));
+		guiConfigurator.configureStringField(fldCatalogID  , null                 , str -> Tools.doIfNotNull(currentBook, b -> { b.catalogID = str; this.notifier.books.fieldChanged(this, b, Field.CatalogID  ); }));
+		guiConfigurator.configureIntField   (fldReleaseYear, n -> n>0             , n   -> Tools.doIfNotNull(currentBook, b -> { b.releaseYear = n; this.notifier.books.fieldChanged(this, b, Field.ReleaseYear); }));
 		guiConfigurator.configureOutputField(fldAuthors);
 		guiConfigurator.configureOutputField(fldBookSeriesPos);
-		guiConfigurator.configureEditableComboBox(
-				cmbbxBookSeries, BookSeries.class,
-				() -> this.bookStorage.getListOfBookSeries(),
-				bs -> Tools.doIfNotNull(currentBook, b -> this.bookStorage.assign(b, bs)),
-				str -> {
-					if (currentBook==null) return;
-					BookSeries bs = this.bookStorage.createBookSeries();
-					bs.name = str;
-					this.bookStorage.assign(currentBook, bs);
-				}
-		);
-		guiConfigurator.configureEditableComboBox(
-				cmbbxPublisher, Publisher.class,
-				() -> this.bookStorage.getListOfKnownPublishers(),
-				p -> Tools.doIfNotNull(currentBook, b -> b.publisher = p),
-				str -> {
-					if (currentBook==null) return;
-					currentBook.publisher = this.bookStorage.getOrCreatePublisher(str);
-				}
-		);
 		
 		labTitle       = new JLabel("Title"         +":  ");
 		labAuthors     = new JLabel("Author(s)"     +":  ");
@@ -165,6 +152,26 @@ class BookPanel extends JPanel
 		updateFields();
 	}
 	
+	private void assignBookSeriesToCurrentBook(BookSeries bs)
+	{
+		if (currentBook == null) return;
+		bookStorage.assign(currentBook, bs);
+		updateFldBookSeriesPos();
+		notifier.books.fieldChanged(this, currentBook, Field.BookSeries);
+	}
+	
+	private void updateFldBookSeriesPos()
+	{
+		if (currentBook == null) return;
+		fldBookSeriesPos.setText(Tools.getIfNotNull(currentBook.bookSeries, "", bs_ -> Tools.toOrdinalString(bs_.books.indexOf(currentBook)+1) ));
+	}
+	
+	void updateAfterBookStorageLoaded()
+	{
+		cmbbxBookSeries.updateValues();
+		cmbbxPublisher .updateValues();
+	}
+
 	void setBook(Book book)
 	{
 		currentBook = book;
@@ -173,16 +180,18 @@ class BookPanel extends JPanel
 
 	private void updateFields()
 	{
-		guiConfigurator.ignoreInputEvents = true;
+		setIgnoreInputEvents(true);
+		
 		labID           .setText(FORMAT_LABEL_ID.formatted(Tools.getIfNotNull(currentBook, "", b -> b.id)));
 		fldTitle        .setText(Tools.getIfNotNull(currentBook, "", b -> b.title));
 		fldAuthors      .setText(Tools.getIfNotNull(currentBook, "", b -> b.concatenateAuthors()));
 		fldBookSeriesPos.setText(Tools.getIfNotNull(currentBook, "", b -> Tools.getIfNotNull(b.bookSeries, "", bs -> Tools.toOrdinalString(bs.books.indexOf(b)+1) )));
-		fldReleaseYear  .setText(Tools.getIfNotNull(currentBook, "", b -> Integer.toString(b.releaseYear)));
+		fldReleaseYear  .setText(Tools.getIfNotNull(currentBook, "", b -> b.releaseYear<0 ? "" : Integer.toString(b.releaseYear)));
 		fldCatalogID    .setText(Tools.getIfNotNull(currentBook, "", b -> b.catalogID));
 		cmbbxBookSeries .setSelectedItem(Tools.getIfNotNull(currentBook, null, b -> b.bookSeries));
 		cmbbxPublisher  .setSelectedItem(Tools.getIfNotNull(currentBook, null, b -> b.publisher ));
-		guiConfigurator.ignoreInputEvents = false;
+		
+		setIgnoreInputEvents(false);
 		
 		coverImagesPanel.imgvwBack .setFile(Tools.getIfNotNull(currentBook, null, b -> b.backCover ));
 		coverImagesPanel.imgvwSpine.setFile(Tools.getIfNotNull(currentBook, null, b -> b.spineCover));
@@ -190,6 +199,78 @@ class BookPanel extends JPanel
 		
 		for (Component comp : getComponents())
 			comp.setEnabled(currentBook != null && isEnabled());
+	}
+
+	private void setIgnoreInputEvents(boolean ignoreInputEvents)
+	{
+		guiConfigurator.ignoreInputEvents = ignoreInputEvents;
+		cmbbxBookSeries.ignoreInputEvents = ignoreInputEvents;
+		cmbbxPublisher .ignoreInputEvents = ignoreInputEvents;
+	}
+
+	private final class BookSeriesComboBox extends EditableComboBox<BookSeries>
+	{
+		private static final long serialVersionUID = -9116778313951252597L;
+	
+		private BookSeriesComboBox()
+		{
+			super(BookSeries.class);
+			setRenderer(new Tables.NonStringRenderer<>( obj -> {
+				if (obj == null                 ) return "-----";
+				if (obj instanceof BookSeries bs) return bs.name;
+				return obj.toString();
+			} ));
+		}
+	
+		@Override protected List<BookSeries> getValues()
+		{
+			return Tools.addNull( bookStorage.getListOfBookSeries() );
+		}
+	
+		@Override protected void setValue(BookSeries bs)
+		{
+			if (currentBook==null) return;
+			assignBookSeriesToCurrentBook(bs);
+		}
+	
+		@Override protected BookSeries addNewValueAndSet(String str)
+		{
+			if (currentBook==null) return null;
+			BookSeries bs = bookStorage.createBookSeries();
+			bs.name = str;
+			assignBookSeriesToCurrentBook(bs);
+			return bs;
+		}
+	}
+
+	private final class PublisherComboBox extends EditableComboBox<Publisher>
+	{
+		private static final long serialVersionUID = 4015497969920622929L;
+
+		private PublisherComboBox()
+		{
+			super(Publisher.class);
+		}
+
+		@Override protected List<Publisher> getValues()
+		{
+			return bookStorage.getListOfKnownPublishers();
+		}
+
+		@Override protected void setValue(Publisher p)
+		{
+			if (currentBook == null) return;
+			currentBook.publisher = p;
+			notifier.books.fieldChanged(this, currentBook, Field.Publisher);
+		}
+
+		@Override protected Publisher addNewValueAndSet(String str)
+		{
+			if (currentBook==null) return null;
+			currentBook.publisher = bookStorage.getOrCreatePublisher(str);
+			notifier.books.fieldChanged(this, currentBook, Field.Publisher);
+			return currentBook.publisher;
+		}
 	}
 
 	private class CoverImagesPanel extends JPanel
