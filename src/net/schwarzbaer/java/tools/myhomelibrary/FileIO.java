@@ -13,6 +13,7 @@ import javax.swing.JOptionPane;
 public class FileIO
 {
 	private static final String dataFolderName = "data";
+	private static final String imageFolderName = "images";
 	
 	public enum DataFile
 	{
@@ -28,6 +29,34 @@ public class FileIO
 		{
 			return new File( getDataFolder(), filename );
 		}
+	}
+	
+	public static File getImageFile(String filename) throws FileIOException
+	{
+		return new File( getImageFolder(), filename );
+	}
+
+	private static File getImageFolder() throws FileIOException
+	{
+		File imageFolder = new File(getDataFolder(), imageFolderName);
+		if (!imageFolder.isDirectory())
+		{
+			if (imageFolder.exists())
+				throw new FileIOException(
+						"Can't create folder \"%s\" in data folder. There exist".formatted( imageFolderName ),
+						"something with same name, that's not a folder."
+				);
+			
+			try { Files.createDirectory(imageFolder.toPath()); }
+			catch (IOException ex) {
+				//ex.printStackTrace();
+				throw new FileIOException(
+						"IOException while creating folder \"%s\" in data folder:".formatted( imageFolderName ),
+						ex.getMessage()
+				);
+			}
+		}
+		return imageFolder;
 	}
 
 	private static File getDataFolder() throws FileIOException

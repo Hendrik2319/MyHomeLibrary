@@ -1,6 +1,6 @@
 package net.schwarzbaer.java.tools.myhomelibrary.data;
 
-public record Author(String name)
+public record Publisher(String name)
 {
 	@Override
 	public String toString()

@@ -9,14 +9,16 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Vector;
 
 import net.schwarzbaer.java.tools.myhomelibrary.FileIO;
 import net.schwarzbaer.java.tools.myhomelibrary.FileIO.FileIOException;
 import net.schwarzbaer.java.tools.myhomelibrary.MyHomeLibrary;
+import net.schwarzbaer.java.tools.myhomelibrary.Tools;
 import net.schwarzbaer.java.tools.myhomelibrary.data.UniqueID.UniqueIDException;
 
 public class BookStorage
@@ -27,18 +29,73 @@ public class BookStorage
 	private static final UniqueID bookSeriesIDs = new UniqueID(4);
 	
 	private final MyHomeLibrary main;
-	private final List<Book> books;
+	private final Map<String,Book> books;
 	private final Map<String,BookSeries> bookSeries;
 	private final Map<String,Author> authors;
+	private final Map<String,Publisher> publishers;
 	
 	public BookStorage(MyHomeLibrary main)
 	{
 		this.main = main;
-		books      = new Vector<>();
+		books      = new HashMap<>();
 		bookSeries = new HashMap<>();
 		authors    = new HashMap<>();
+		publishers = new HashMap<>();
 	}
 	
+	public List<Book> getListOfBooks()
+	{
+		return books
+				.values()
+				.stream()
+				.sorted(
+						Comparator.<Book,String>comparing(
+								b -> Tools.getIfNotNull(b.title, "<unnamed>"),
+								Comparator.<String,String>comparing(String::toLowerCase).thenComparing(Comparator.naturalOrder())
+						)
+				)
+				.toList();
+	}
+
+	public List<BookSeries> getListOfBookSeries()
+	{
+		return bookSeries
+				.values()
+				.stream()
+				.sorted(
+						Comparator.<BookSeries,String>comparing(
+								bs -> Tools.getIfNotNull(bs.name, "<unnamed>"),
+								Comparator.<String,String>comparing(String::toLowerCase).thenComparing(Comparator.naturalOrder())
+						)
+				)
+				.toList();
+	}
+
+	public List<Publisher> getListOfKnownPublishers()
+	{
+		return publishers
+				.values()
+				.stream()
+				.sorted(
+						Comparator.<Publisher,String>comparing(
+								p -> Tools.getIfNotNull(p.name(), "<unnamed>"),
+								Comparator.<String,String>comparing(String::toLowerCase).thenComparing(Comparator.naturalOrder())
+						)
+				)
+				.toList();
+	}
+
+	public void assign(Book book, BookSeries bookSeries)
+	{
+		if (book.bookSeries!=null)
+			book.bookSeries.books.remove(book);
+		
+		book.bookSeries = bookSeries;
+		
+		if (!book.bookSeries.books.contains(book))
+			book.bookSeries.books.add(book);
+	}
+
 	public Book createBook()
 	{
 		return createBook(bookIDs.createNew());
@@ -47,7 +104,7 @@ public class BookStorage
 	private Book createBook(String id)
 	{
 		Book book = new Book(id);
-		books.add(book);
+		books.put(id, book);
 		return book;
 	}
 	
@@ -63,9 +120,19 @@ public class BookStorage
 		return bookSeries;
 	}
 	
+	public Author getOrCreateAuthor(String name)
+	{
+		return authors.computeIfAbsent(name, Author::new);
+	}
+
+	public Publisher getOrCreatePublisher(String name)
+	{
+		return publishers.computeIfAbsent(name, Publisher::new);
+	}
+
 	private enum Field
 	{
-		ID, name, title, bookSeries, author, releaseYear, publisher, publisherID, frontCover, spineCover, backCover
+		ID, name, book, title, bookSeries, author, releaseYear, publisher, catalogID, frontCover, spineCover, backCover
 	}
 	
 	private static String getLineValue(String line, Field field)
@@ -107,13 +174,18 @@ public class BookStorage
 		books.clear();
 		bookSeries.clear();
 		authors.clear();
+		publishers.clear();
+		
+		if (file.isFile())
+			System.out.printf("Read BookStorage from file \"%s\" ...%n", file.getAbsolutePath());
 		
 		int ln = 0;
-		System.out.printf("Read BookStorage from file \"%s\" ...%n", file.getAbsolutePath());
 		try (BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8)))
 		{
 			Book currentBook = null;
 			BookSeries currentBookSeries = null;
+			List<String> currentBookList = null;
+			Map<String,List<String>> allBookLists = new HashMap<>();
 			boolean expectingBook = false;
 			boolean expectingBookSeries = false;
 			String valueStr;
@@ -131,6 +203,7 @@ public class BookStorage
 				{
 					currentBook = null;
 					currentBookSeries = null;
+					currentBookList = null;
 					expectingBookSeries = true;
 				}
 				
@@ -138,6 +211,7 @@ public class BookStorage
 				{
 					currentBook = null;
 					currentBookSeries = null;
+					currentBookList = null;
 					expectingBook = true;
 				}
 				
@@ -148,6 +222,7 @@ public class BookStorage
 						bookSeriesIDs.addKnownID(valueStr);
 						currentBook = null;
 						currentBookSeries = createBookSeries(valueStr);
+						allBookLists.put(valueStr, currentBookList = new ArrayList<>());
 						expectingBookSeries = false;
 					}
 					else if (expectingBook)
@@ -155,28 +230,60 @@ public class BookStorage
 						bookIDs.addKnownID(valueStr);
 						currentBook = createBook(valueStr);
 						currentBookSeries = null;
+						currentBookList = null;
 						expectingBook = false;
 					}
 				}
 				
-				if (currentBookSeries!=null)
+				if (currentBookSeries!=null && currentBookList!=null)
 				{
 					if ((valueStr = getLineValue(line, Field.name))!=null) currentBookSeries.name = valueStr;
+					if ((valueStr = getLineValue(line, Field.book))!=null) currentBookList.add(valueStr);
 				}
 				
 				if (currentBook!=null)
 				{
 					if ((valueStr = getLineValue(line, Field.title      ))!=null) currentBook.title       = valueStr;
 					if ((valueStr = getLineValue(line, Field.bookSeries ))!=null) currentBook.bookSeries  = bookSeries.get(valueStr);
-					if ((valueStr = getLineValue(line, Field.author     ))!=null) currentBook.authors     .add(authors.computeIfAbsent(valueStr, Author::new));
+					if ((valueStr = getLineValue(line, Field.author     ))!=null) currentBook.authors     .add(getOrCreateAuthor(valueStr));
 					if ((valueStr = getLineValue(line, Field.releaseYear))!=null) currentBook.releaseYear = parseInt(valueStr);
-					if ((valueStr = getLineValue(line, Field.publisher  ))!=null) currentBook.publisher   = valueStr;
-					if ((valueStr = getLineValue(line, Field.publisherID))!=null) currentBook.publisherID = valueStr;
+					if ((valueStr = getLineValue(line, Field.publisher  ))!=null) currentBook.publisher   = getOrCreatePublisher(valueStr);
+					if ((valueStr = getLineValue(line, Field.catalogID  ))!=null) currentBook.catalogID   = valueStr;
 					if ((valueStr = getLineValue(line, Field.frontCover ))!=null) currentBook.frontCover  = valueStr;
 					if ((valueStr = getLineValue(line, Field.spineCover ))!=null) currentBook.spineCover  = valueStr;
 					if ((valueStr = getLineValue(line, Field.backCover  ))!=null) currentBook.backCover   = valueStr;
 				}
 			}
+			
+			allBookLists.forEach((seriesID, bookIDList) -> {
+				BookSeries bookSeries = this.bookSeries.get(seriesID);
+				if (bookSeries==null)
+					throw new IllegalStateException();
+				if (!seriesID.equals(bookSeries.id))
+					throw new IllegalStateException();
+				for (String bookID : bookIDList)
+				{
+					Book book = books.get(bookID);
+					if (book==null)
+						System.err.printf("BookSeries[ID:%s] references to unknown Book[ID:%s].%n", seriesID, bookID);
+					else
+					{
+						if (!bookID.equals(book.id))
+							throw new IllegalStateException();
+						bookSeries.books.add(book);
+						if (book.bookSeries == null)
+							System.err.printf("BookSeries[ID:%s] references to Book[ID:%s]. But this Book have no reference to any BookSeries.%n", seriesID, bookID);
+						else if (book.bookSeries != bookSeries)
+							System.err.printf("BookSeries[ID:%s] references to Book[ID:%s]. But this Book references to another BookSeries[ID:%s].%n", seriesID, bookID, book.bookSeries.id);
+					}
+				}
+			});
+			
+			books.forEach((bookID, book) -> {
+				if (book.bookSeries==null) return;
+				if (!book.bookSeries.books.contains(book))
+					System.err.printf("Book[ID:%s] references to BookSeries[ID:%s]. But this BookSeries have no reference to this Book.%n", book.id, book.bookSeries.id);
+			});
 			
 			System.out.printf("... done%n");
 		}
@@ -200,7 +307,7 @@ public class BookStorage
 				System.err.printf("   caused by %s: %s%n", cause.getClass().getCanonicalName(), cause.getMessage());
 		}
 	}
-	
+
 	public void writeToFile()
 	{
 		if (books.isEmpty() && bookSeries.isEmpty())
@@ -225,19 +332,20 @@ public class BookStorage
 			bookSeries.values().stream().sorted().forEach(bs -> {
 				System.out.println(HEADER_BOOK_SERIES);
 				System.out.printf("%s = %s%n", Field.ID, bs.id);
-				if (bs.name!=null) System.out.printf("%s = %s%n", Field.name, bs.name);
+				if (bs.name!=null)    System.out.printf("%s = %s%n", Field.name, bs.name);
+				bs.books.forEach(b -> System.out.printf("%s = %s%n", Field.book, b.id   ));
 				System.out.println();
 			});
 			
-			books.stream().sorted().forEach(b -> {
+			books.values().stream().sorted().forEach(b -> {
 				System.out.println(HEADER_BOOK);
 				System.out.printf("%s = %s%n", Field.ID, b.id);
 				if (b.title      !=null) System.out.printf("%s = %s%n", Field.title      , b.title        );
 				if (b.bookSeries !=null) System.out.printf("%s = %s%n", Field.bookSeries , b.bookSeries.id);
-				b.authors.forEach(a ->   System.out.printf("%s = %s%n", Field.author     , a.name         ));
+				b.authors.forEach(a ->   System.out.printf("%s = %s%n", Field.author     , a.name()       ));
 				if (b.releaseYear>0    ) System.out.printf("%s = %d%n", Field.releaseYear, b.releaseYear  );
 				if (b.publisher  !=null) System.out.printf("%s = %s%n", Field.publisher  , b.publisher    );
-				if (b.publisherID!=null) System.out.printf("%s = %s%n", Field.publisherID, b.publisherID  );
+				if (b.catalogID  !=null) System.out.printf("%s = %s%n", Field.catalogID  , b.catalogID    );
 				if (b.frontCover !=null) System.out.printf("%s = %s%n", Field.frontCover , b.frontCover   );
 				if (b.spineCover !=null) System.out.printf("%s = %s%n", Field.spineCover , b.spineCover   );
 				if (b.backCover  !=null) System.out.printf("%s = %s%n", Field.backCover  , b.backCover    );

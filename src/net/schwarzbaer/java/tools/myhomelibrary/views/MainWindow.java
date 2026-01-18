@@ -13,12 +13,12 @@ public class MainWindow extends StandardMainWindow
 	private final JTabbedPane tabbedPane;
 	private final BooksTab booksTab;
 
-	public MainWindow()
+	public MainWindow(MyHomeLibrary main)
 	{
 		super("My Home Library");
 		
 		tabbedPane = new JTabbedPane();
-		tabbedPane.addTab("Books", booksTab = new BooksTab());
+		tabbedPane.addTab("Books", booksTab = new BooksTab(main));
 		
 		startGUI(tabbedPane);
 		

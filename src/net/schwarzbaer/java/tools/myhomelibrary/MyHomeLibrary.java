@@ -24,7 +24,7 @@ public class MyHomeLibrary
 	private MyHomeLibrary()
 	{
 		bookStorage = new BookStorage(this);
-		mainWindow = new MainWindow();
+		mainWindow = new MainWindow(this);
 	}
 
 	private void initialize()
