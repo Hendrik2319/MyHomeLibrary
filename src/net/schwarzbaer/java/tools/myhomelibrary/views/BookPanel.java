@@ -101,12 +101,19 @@ class BookPanel extends JPanel
 		btnEditAuthors = Tools.createButton("Edit", true, null, e->{
 			if (currentBook == null) return;
 			
-			boolean changed = EditAuthorsDialog.showDialog( this.main, currentBook.authors, ()->fldAuthors.setText(currentBook.concatenateAuthors()) );
-			if (changed)
+			EditAuthorsDialog.showDialog( this.main, currentBook.authors, () -> {
+				fldAuthors.setText(currentBook.concatenateAuthors());
 				this.main.notifier.books.fieldChanged(this, currentBook, Field.Authors);
+			} );
 		});
 		btnChangeBSPos = Tools.createButton("Pos.", true, null, e->{
-			// TODO Auto-generated method stub (btnChangeBSPos)
+			if (currentBook==null || currentBook.bookSeries==null || currentBook.bookSeries.books.size() <= 1)
+				return;
+			
+			ChangeBSPosDialog.showDialog( this.main, currentBook.bookSeries, () -> {
+				updateFldBookSeriesPos();
+				this.main.notifier.books.fieldChanged(this, currentBook, Field.BookSeries);
+			} );
 		});
 		
 		cmbbxBookSeries = new BookSeriesComboBox();
@@ -178,15 +185,25 @@ class BookPanel extends JPanel
 		if (currentBook == null) return;
 		main.bookStorage.assign(currentBook, bs);
 		updateFldBookSeriesPos();
+		updateBtnChangeBSPos();
 		main.notifier.books.fieldChanged(this, currentBook, Field.BookSeries);
 	}
 	
 	private void updateFldBookSeriesPos()
 	{
 		if (currentBook == null) return;
-		fldBookSeriesPos.setText(Tools.getIfNotNull(currentBook.bookSeries, "", bs_ -> Tools.toOrdinalString(bs_.books.indexOf(currentBook)+1) ));
+		fldBookSeriesPos.setText(Tools.getIfNotNull(currentBook.bookSeries, "", bs -> Tools.toOrdinalString(bs.books.indexOf(currentBook)+1) ));
 	}
 	
+	private void updateBtnChangeBSPos()
+	{
+		btnChangeBSPos.setEnabled(
+				currentBook!=null &&
+				currentBook.bookSeries!=null &&
+				currentBook.bookSeries.books.size()>1
+		);
+	}
+
 	void updateAfterBookStorageLoaded()
 	{
 		cmbbxBookSeries.updateValues();
@@ -213,6 +230,8 @@ class BookPanel extends JPanel
 		cmbbxPublisher  .setSelectedItem(Tools.getIfNotNull(currentBook, null, b -> b.publisher ));
 		
 		setIgnoreInputEvents(false);
+		
+		updateBtnChangeBSPos();
 		
 		coverImagesPanel.imgvwBack .setFile(Tools.getIfNotNull(currentBook, null, b -> b.backCover ));
 		coverImagesPanel.imgvwSpine.setFile(Tools.getIfNotNull(currentBook, null, b -> b.spineCover));
@@ -436,7 +455,7 @@ class BookPanel extends JPanel
 		private static final long serialVersionUID = 5038062564157536297L;
 		
 		private final List<Author> authors;
-		private final Runnable updateAuthorsField;
+		private final Runnable updateAfterChange;
 		
 		private final JList<Author> list;
 		private final DefaultListModel<Author> listModel;
@@ -447,16 +466,14 @@ class BookPanel extends JPanel
 		
 		private List<Author> selected;
 		private int[] selectedIndices;
-		private boolean someThingChanged;
 
-		EditAuthorsDialog(MyHomeLibrary main, List<Author> authors, Runnable updateAuthorsField)
+		private EditAuthorsDialog(MyHomeLibrary main, List<Author> authors, Runnable updateAfterChange)
 		{
 			super(main.mainWindow, "Edit Authors");
-			this.updateAuthorsField = Objects.requireNonNull( updateAuthorsField );
+			this.updateAfterChange = Objects.requireNonNull( updateAfterChange );
 			this.authors = Objects.requireNonNull( authors );
 			selected = List.of();
 			selectedIndices = new int[0];
-			someThingChanged = false;
 			
 			listModel = new DefaultListModel<>();
 			listModel.addAll(this.authors);
@@ -476,8 +493,7 @@ class BookPanel extends JPanel
 				{
 					this.authors.add(author);
 					listModel.addElement(author);
-					this.updateAuthorsField.run();
-					someThingChanged = true;
+					this.updateAfterChange.run();
 				}
 			});
 			btnRemove = Tools.createButton("Remove", true, GrayCommandIcons.IconGroup.Delete, e -> {
@@ -486,8 +502,7 @@ class BookPanel extends JPanel
 					this.authors.removeAll(selected);
 					for (Author a : selected)
 						listModel.removeElement(a);
-					this.updateAuthorsField.run();
-					someThingChanged = true;
+					this.updateAfterChange.run();
 				}
 			});
 			btnMoveUp   = Tools.createButton("Move", true, GrayCommandIcons.IconGroup.Up  , e -> swap(-1));
@@ -500,10 +515,10 @@ class BookPanel extends JPanel
 			c.weighty = 1;
 			c.gridx = -1;
 			c.gridy = 0;
-			buttonPanel.add(btnAdd     , c);
-			buttonPanel.add(btnRemove  , c);
-			buttonPanel.add(btnMoveUp  , c);
-			buttonPanel.add(btnMoveDown, c);
+			c.gridx++; buttonPanel.add(btnAdd     , c);
+			c.gridx++; buttonPanel.add(btnRemove  , c);
+			c.gridx++; buttonPanel.add(btnMoveUp  , c);
+			c.gridx++; buttonPanel.add(btnMoveDown, c);
 			
 			JPanel panel = new JPanel(new BorderLayout());
 			panel.add(scrollPane, BorderLayout.CENTER);
@@ -522,50 +537,110 @@ class BookPanel extends JPanel
 			if (selectedIndices.length==1)
 			{
 				int index = selectedIndices[0];
-				boolean success1 = swap(authors, index, index+inc);
-				boolean success2 = swap(listModel, index, index+inc);
+				boolean success1 = Tools.swap(authors  , index, index+inc);
+				boolean success2 = Tools.swap(listModel, index, index+inc);
 				if (success2)
-				{
 					list.setSelectedIndex(index+inc);
-				}
 				if (success1)
-				{
-					updateAuthorsField.run();
-					someThingChanged = true;
-				}
+					updateAfterChange.run();
 			}
-		}
-
-		private boolean swap(DefaultListModel<Author> list, int index1, int index2)
-		{
-			if (index1<0 || index1>=list.size()) return false;
-			if (index2<0 || index2>=list.size()) return false;
-			list.set(index2, list.set(index1, list.get(index2)));
-			return true;
-		}
-
-		private boolean swap(List<Author> list, int index1, int index2)
-		{
-			if (index1<0 || index1>=list.size()) return false;
-			if (index2<0 || index2>=list.size()) return false;
-			list.set(index2, list.set(index1, list.get(index2)));
-			return true;
 		}
 
 		private void updateButtons()
 		{
 			btnAdd     .setEnabled(true);
 			btnRemove  .setEnabled(!selected.isEmpty());
-			btnMoveUp  .setEnabled(selectedIndices.length==1);
-			btnMoveDown.setEnabled(selectedIndices.length==1);
+			btnMoveUp  .setEnabled(selectedIndices.length==1 && selectedIndices[0]>0);
+			btnMoveDown.setEnabled(selectedIndices.length==1 && selectedIndices[0]>=0 && selectedIndices[0]+1<authors.size());
 		}
 
-		static boolean showDialog(MyHomeLibrary main, List<Author> authors, Runnable updateAuthorsField)
+		static void showDialog(MyHomeLibrary main, List<Author> authors, Runnable updateAuthorsField)
 		{
-			EditAuthorsDialog dlg = new EditAuthorsDialog(main, authors, updateAuthorsField);
-			dlg.showDialog();
-			return dlg.someThingChanged;
+			new EditAuthorsDialog(main, authors, updateAuthorsField).showDialog();
 		}
-	
+	}
+
+	private static class ChangeBSPosDialog extends StandardDialog
+	{
+		private static final long serialVersionUID = 4898594147398259360L;
+		
+		private final BookSeries bookSeries;
+		private final Runnable updateAfterChange;
+		
+		private final JList<Book> list;
+		private final JButton btnMoveUp;
+		private final JButton btnMoveDown;
+		
+		private int selectedIndex;
+
+		private ChangeBSPosDialog(MyHomeLibrary main, BookSeries bookSeries, Runnable updateAfterChange)
+		{
+			super(main.mainWindow, "Change order of books in series");
+			this.updateAfterChange = Objects.requireNonNull( updateAfterChange );
+			this.bookSeries = Objects.requireNonNull( bookSeries );
+			selectedIndex = -1;
+			
+			JTextField fldBSName = new JTextField(this.bookSeries.name, 30);
+			fldBSName.setEditable(false);
+			fldBSName.setCaretPosition(0);
+			
+			list = new JList<>(this.bookSeries.books);
+			list.setSelectionMode(ListSelectionModel.SINGLE_INTERVAL_SELECTION);
+			list.addListSelectionListener(ev -> {
+				selectedIndex = list.getSelectedIndex();
+				updateButtons();
+			});
+			JScrollPane scrollPane = new JScrollPane(list);
+			
+			btnMoveUp   = Tools.createButton("Move", true, GrayCommandIcons.IconGroup.Up  , e -> swap(-1));
+			btnMoveDown = Tools.createButton("Move", true, GrayCommandIcons.IconGroup.Down, e -> swap(+1));
+			
+			JPanel buttonPanel = new JPanel(new GridBagLayout());
+			GridBagConstraints c = new GridBagConstraints();
+			c.fill = GridBagConstraints.BOTH;
+			c.weightx = 1;
+			c.weighty = 1;
+			c.gridx = -1;
+			c.gridy = 0;
+			c.gridx++; buttonPanel.add(btnMoveUp  , c);
+			c.gridx++; buttonPanel.add(btnMoveDown, c);
+			
+			JPanel panelTitle = new JPanel(new BorderLayout());
+			panelTitle.add(new JLabel("Book Series: "), BorderLayout.WEST);
+			panelTitle.add(fldBSName, BorderLayout.CENTER);
+			
+			JPanel contentPane = new JPanel(new BorderLayout());
+			contentPane.add(panelTitle, BorderLayout.NORTH);
+			contentPane.add(scrollPane, BorderLayout.CENTER);
+			contentPane.add(buttonPanel, BorderLayout.SOUTH);
+			
+			createGUI(contentPane, Tools.createButton("Close", true, null, e -> closeDialog()));
+			
+			updateButtons();
+		}
+		
+		private void swap(int inc)
+		{
+			if (selectedIndex < 0) return;
+			
+			int index = selectedIndex;
+			boolean success = Tools.swap(this.bookSeries.books, index, index+inc);
+			if (success)
+			{
+				list.setSelectedIndex(index+inc);
+				updateAfterChange.run();
+			}
+		}
+
+		private void updateButtons()
+		{
+			btnMoveUp  .setEnabled(selectedIndex>0);
+			btnMoveDown.setEnabled(selectedIndex>=0 && selectedIndex+1<bookSeries.books.size());
+		}
+
+		static void showDialog(MyHomeLibrary main, BookSeries bookSeries, Runnable updateFldBookSeriesPos)
+		{
+			new ChangeBSPosDialog(main, bookSeries, updateFldBookSeriesPos).showDialog();
+		}
 	}
 }

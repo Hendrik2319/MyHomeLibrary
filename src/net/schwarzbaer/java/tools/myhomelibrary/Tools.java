@@ -12,6 +12,7 @@ import java.util.function.IntConsumer;
 import java.util.function.IntPredicate;
 import java.util.function.Predicate;
 
+import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
@@ -77,6 +78,25 @@ public class Tools
 			System.err.printf("%s while %s: %s%n", ex.getClass().getCanonicalName(), label, ex.getMessage());
 		}
 	}
+
+	public static <V> boolean swap(DefaultListModel<V> list, int index1, int index2)
+	{
+		if (index1<0 || index1>=list.size()) return false;
+		if (index2<0 || index2>=list.size()) return false;
+		list.set(index2, list.set(index1, list.get(index2)));
+		return true;
+	}
+
+	public static <V> boolean swap(List<V> list, int index1, int index2)
+	{
+		if (index1<0 || index1>=list.size()) return false;
+		if (index2<0 || index2>=list.size()) return false;
+		list.set(index2, list.set(index1, list.get(index2)));
+		return true;
+	}
+	
+	public static final Color TEXTCOLOR_NONSUBMITTED_TEXT = Color.BLUE;
+	public static final Color BGCOLOR_WRONG_INPUT = Color.RED;
 	
 	public static class GUIConfigurator
 	{
@@ -125,7 +145,7 @@ public class Tools
 				
 				if (value==null || (isOK!=null && !isOK.test(value)))
 				{
-					SwingUtilities.invokeLater(()->field.setBackground(Color.RED));
+					SwingUtilities.invokeLater(()->field.setBackground(BGCOLOR_WRONG_INPUT));
 					return;
 				}
 				
@@ -138,7 +158,7 @@ public class Tools
 				public void keyTyped(KeyEvent e)
 				{
 					field.setBackground(defaultTextFieldBackground);
-					field.setForeground(Color.BLUE);
+					field.setForeground(TEXTCOLOR_NONSUBMITTED_TEXT);
 				}
 			});
 		}
