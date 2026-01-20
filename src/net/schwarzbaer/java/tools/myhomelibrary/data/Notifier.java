@@ -36,8 +36,10 @@ public class Notifier
 	
 	public static class BookChangeController extends Controller<BookChangeListener> implements BookChangeListener
 	{
-		@Override public void fieldChanged (Object source,     Book  book ,     Book.Field  field ) { forEach("fieldChanged" , source, l -> l.fieldChanged (source, book , field )); }
-		@Override public void fieldsChanged(Object source, Set<Book> books, Set<Book.Field> fields) { forEach("fieldsChanged", source, l -> l.fieldsChanged(source, books, fields)); }
+		@Override public void fieldChanged  (Object source,     Book  book ,     Book.Field  field ) { forEach("fieldChanged"  , source, l -> l.fieldChanged  (source, book , field )); }
+		@Override public void fieldsChanged (Object source, Set<Book> books, Set<Book.Field> fields) { forEach("fieldsChanged" , source, l -> l.fieldsChanged (source, books, fields)); }
+		@Override public void authorAdded   (Object source, Author    author                       ) { forEach("authorAdded"   , source, l -> l.authorAdded   (source, author       )); }
+		@Override public void publisherAdded(Object source, Publisher publisher                    ) { forEach("publisherAdded", source, l -> l.publisherAdded(source, publisher    )); }
 	}
 	
 	public static class BookSeriesChangeController extends Controller<BookSeriesChangeListener> implements BookSeriesChangeListener
@@ -54,11 +56,15 @@ public class Notifier
 	{
 		void fieldChanged (Object source,     Book  book ,     Book.Field  field );
 		void fieldsChanged(Object source, Set<Book> books, Set<Book.Field> fields);
+		void authorAdded   (Object source, Author    author   );
+		void publisherAdded(Object source, Publisher publisher);
 		
 		public static class Adapter implements BookChangeListener
 		{
 			@Override public void fieldChanged (Object source,     Book  book ,     Book.Field  field ) {}
 			@Override public void fieldsChanged(Object source, Set<Book> books, Set<Book.Field> fields) {}
+			@Override public void authorAdded   (Object source, Author    author   ) {}
+			@Override public void publisherAdded(Object source, Publisher publisher) {}
 		}
 	}
 	

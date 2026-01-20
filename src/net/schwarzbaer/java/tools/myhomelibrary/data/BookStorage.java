@@ -46,44 +46,39 @@ public class BookStorage
 	
 	public List<Book> getListOfBooks()
 	{
-		return books
-				.values()
-				.stream()
-				.sorted(
-						Comparator.<Book,String>comparing(
-								b -> Tools.getIfNotNull(b.title, "<unnamed>"),
-								Comparator.<String,String>comparing(String::toLowerCase).thenComparing(Comparator.naturalOrder())
-						)
-				)
-				.toList();
+		return getList(books, b -> Tools.getIfNotNull(b.title, "<unnamed>"));
 	}
 
 	public List<BookSeries> getListOfBookSeries()
 	{
-		return bookSeries
-				.values()
-				.stream()
-				.sorted(
-						Comparator.<BookSeries,String>comparing(
-								bs -> Tools.getIfNotNull(bs.name, "<unnamed>"),
-								Comparator.<String,String>comparing(String::toLowerCase).thenComparing(Comparator.naturalOrder())
-						)
-				)
-				.toList();
+		return getList(bookSeries, bs -> Tools.getIfNotNull(bs.name, "<unnamed>"));
+	}
+
+	public List<Author> getListOfKnownAuthors()
+	{
+		return getList(authors, a -> Tools.getIfNotNull(a.name(), "<unnamed>"));
 	}
 
 	public List<Publisher> getListOfKnownPublishers()
 	{
-		return publishers
+		return getList(publishers, p -> Tools.getIfNotNull(p.name(), "<unnamed>"));
+	}
+	
+	private <V> List<V> getList(Map<String,V> map, Function<V,String> getName)
+	{
+		return map
 				.values()
 				.stream()
-				.sorted(
-						Comparator.<Publisher,String>comparing(
-								p -> Tools.getIfNotNull(p.name(), "<unnamed>"),
-								Comparator.<String,String>comparing(String::toLowerCase).thenComparing(Comparator.naturalOrder())
-						)
-				)
+				.sorted( getCompByName(getName) )
 				.toList();
+	}
+
+	private <V> Comparator<V> getCompByName(Function<V, String> getName)
+	{
+		return Comparator.<V,String>comparing(
+				getName,
+				Comparator.<String,String>comparing(String::toLowerCase).thenComparing(Comparator.naturalOrder())
+		);
 	}
 
 	public void assign(Book book, BookSeries bookSeries)

@@ -11,9 +11,11 @@ import javax.swing.ListSelectionModel;
 import net.schwarzbaer.java.lib.gui.GeneralIcons.GrayCommandIcons;
 import net.schwarzbaer.java.tools.myhomelibrary.MyHomeLibrary;
 import net.schwarzbaer.java.tools.myhomelibrary.Tools;
+import net.schwarzbaer.java.tools.myhomelibrary.data.Author;
 import net.schwarzbaer.java.tools.myhomelibrary.data.Book;
 import net.schwarzbaer.java.tools.myhomelibrary.data.Book.Field;
 import net.schwarzbaer.java.tools.myhomelibrary.data.Notifier;
+import net.schwarzbaer.java.tools.myhomelibrary.data.Publisher;
 
 class BooksTab extends JSplitPane
 {
@@ -29,7 +31,7 @@ class BooksTab extends JSplitPane
 		
 		table = new BooksTable();
 		table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-		bookPanel = new BookPanel(this.main.bookStorage, this.main.notifier);
+		bookPanel = new BookPanel(this.main);
 		
 		JToolBar toolBar = new JToolBar();
 		toolBar.setFloatable(false);
@@ -72,6 +74,8 @@ class BooksTab extends JSplitPane
 				table.tableModel.fireColumnUpdateForFields(fields);
 				BooksTab.this.main.bookStorage.writeToFile();
 			}
+			@Override public void authorAdded(Object source, Author author) {}
+			@Override public void publisherAdded(Object source, Publisher publisher) {}
 		});
 	}
 }
