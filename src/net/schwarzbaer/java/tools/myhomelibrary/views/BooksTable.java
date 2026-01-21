@@ -26,7 +26,7 @@ public class BooksTable extends JTable
 	{
 		setModel(tableModel = new BooksTableModel());
 		
-		setRowHeight(90);
+		setRowHeight(Book.FRONTCOVERTHUMB_MAXHEIGHT+6);
 		setRowSorter(tableRowSorter = new Tables.SimplifiedRowSorter(tableModel));
 		setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
 		setColumnSelectionAllowed(false);
@@ -44,9 +44,8 @@ public class BooksTable extends JTable
 	{
 		enum ColumnID implements Tables.SimplifiedColumnIDInterface
 		{
-			BookCover("Cover", BufferedImage.class, 60),
-			BookInfo1("Info" , Book.class, 200),
-			BookInfo2("Info" , Book.class, 200),
+			BookCover("Cover"    , BufferedImage.class, Book.FRONTCOVERTHUMB_MAXWIDTH+6),
+			BookInfo ("Book Info", Book         .class, 500),
 			;
 			private final SimplifiedColumnConfig cfg;
 			ColumnID(String name, Class<?> columnClass, int width)
@@ -99,8 +98,7 @@ public class BooksTable extends JTable
 			{
 			case BookCover:
 				 return row.frontCoverThumb;
-			case BookInfo1:
-			case BookInfo2:
+			case BookInfo:
 				 return row;
 			}
 			

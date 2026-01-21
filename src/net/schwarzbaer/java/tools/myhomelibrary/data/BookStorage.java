@@ -300,6 +300,9 @@ public class BookStorage
 			for (Throwable cause = ex.getCause(); cause != null; cause = cause.getCause())
 				System.err.printf("   caused by %s: %s%n", cause.getClass().getCanonicalName(), cause.getMessage());
 		}
+		
+		for (Book book : books.values())
+			book.updateFrontCoverThumb();
 	}
 
 	public void writeToFile()

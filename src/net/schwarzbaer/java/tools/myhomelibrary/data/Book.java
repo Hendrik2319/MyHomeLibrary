@@ -6,10 +6,16 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import net.schwarzbaer.java.lib.gui.ImageView;
+import net.schwarzbaer.java.tools.myhomelibrary.FileIO;
+
 public class Book implements UniqueID.IdBased<Book>
 {
+	public static final int FRONTCOVERTHUMB_MAXWIDTH  = 60;
+	public static final int FRONTCOVERTHUMB_MAXHEIGHT = 90;
+	
 	public enum Field {
-		Title, Authors, Publisher, CatalogID, BookSeries, ReleaseYear, FrontCover, BackCover, SpineCover
+		Title, Authors, Publisher, CatalogID, BookSeries, ReleaseYear, FrontCover, BackCover, SpineCover, FrontCoverThumb
 	}
 	
 	public final String id;
@@ -45,5 +51,34 @@ public class Book implements UniqueID.IdBased<Book>
 	public String concatenateAuthors()
 	{
 		return authors.stream().map(Author::name).collect(Collectors.joining(", "));
+	}
+	
+	public void updateFrontCoverThumb()
+	{
+		updateFrontCoverThumb( FileIO.loadImagefile( frontCover ) );		
+	}
+	
+	public void updateFrontCoverThumb(BufferedImage image)
+	{
+		frontCoverThumb = scaleFrontCoverThumb(image);
+	}
+
+	private static BufferedImage scaleFrontCoverThumb(BufferedImage image)
+	{
+		if (image==null)
+			return null;
+		
+		int imageWidth  = image.getWidth ();
+		int imageHeight = image.getHeight();
+		double f = Math.max(
+				imageWidth /(double)Book.FRONTCOVERTHUMB_MAXWIDTH ,
+				imageHeight/(double)Book.FRONTCOVERTHUMB_MAXHEIGHT
+		);
+		if (f < 1) // imageWidth && imageHeight are lower than FRONTCOVERTHUMB values
+			return image;
+		
+		int newWidth  = Math.min( (int) Math.round( imageWidth  / f ), Book.FRONTCOVERTHUMB_MAXWIDTH  );
+		int newHeight = Math.min( (int) Math.round( imageHeight / f ), Book.FRONTCOVERTHUMB_MAXHEIGHT );
+		return ImageView.computeScaledImageByBetterScaling(image, newWidth, newHeight, true);
 	}
 }

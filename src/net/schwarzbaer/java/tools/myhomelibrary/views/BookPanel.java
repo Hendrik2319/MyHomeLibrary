@@ -6,19 +6,20 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Window;
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.Vector;
+import java.util.function.BiConsumer;
 
-import javax.imageio.ImageIO;
 import javax.swing.BorderFactory;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JList;
+import javax.swing.JMenu;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
@@ -28,6 +29,7 @@ import net.schwarzbaer.java.lib.gui.GeneralIcons.GrayCommandIcons;
 import net.schwarzbaer.java.lib.gui.ImageView;
 import net.schwarzbaer.java.lib.gui.StandardDialog;
 import net.schwarzbaer.java.lib.gui.Tables;
+import net.schwarzbaer.java.lib.system.ClipboardTools;
 import net.schwarzbaer.java.tools.myhomelibrary.FileIO;
 import net.schwarzbaer.java.tools.myhomelibrary.FileIO.FileIOException;
 import net.schwarzbaer.java.tools.myhomelibrary.MyHomeLibrary;
@@ -36,6 +38,7 @@ import net.schwarzbaer.java.tools.myhomelibrary.data.Author;
 import net.schwarzbaer.java.tools.myhomelibrary.data.Book;
 import net.schwarzbaer.java.tools.myhomelibrary.data.Book.Field;
 import net.schwarzbaer.java.tools.myhomelibrary.data.BookSeries;
+import net.schwarzbaer.java.tools.myhomelibrary.data.Notifier;
 import net.schwarzbaer.java.tools.myhomelibrary.data.Publisher;
 
 class BookPanel extends JPanel
@@ -133,7 +136,7 @@ class BookPanel extends JPanel
 		labPublisher   = new JLabel("Publisher"     +":  ");
 		labCatalogID   = new JLabel("Catalog ID"    +":  ");
 		
-		coverImagesPanel = new CoverImagesPanel();
+		coverImagesPanel = new CoverImagesPanel(this.main.notifier);
 		
 		c.weightx = 0;
 		c.weighty = 0;
@@ -233,9 +236,7 @@ class BookPanel extends JPanel
 		
 		updateBtnChangeBSPos();
 		
-		coverImagesPanel.imgvwBack .setFile(Tools.getIfNotNull(currentBook, null, b -> b.backCover ));
-		coverImagesPanel.imgvwSpine.setFile(Tools.getIfNotNull(currentBook, null, b -> b.spineCover));
-		coverImagesPanel.imgvwFront.setFile(Tools.getIfNotNull(currentBook, null, b -> b.frontCover));
+		coverImagesPanel.setBook(currentBook);
 		
 		for (Component comp : getComponents())
 			comp.setEnabled(currentBook != null && isEnabled());
@@ -314,27 +315,63 @@ class BookPanel extends JPanel
 		}
 	}
 
-	private class CoverImagesPanel extends JPanel
+	private static class CoverImagesPanel extends JPanel
 	{
 		private static final long serialVersionUID = -7178751322272176418L;
-		private SmallImageView imgvwBack;
-		private SmallImageView imgvwSpine;
-		private SmallImageView imgvwFront;
+		
+		private final Notifier notifier;
+		private final SmallImageView imgvwBack;
+		private final SmallImageView imgvwSpine;
+		private final SmallImageView imgvwFront;
+		private Book currentBook;
 
-		CoverImagesPanel()
+		CoverImagesPanel(Notifier notifier)
 		{
 			super(new GridBagLayout());
+			this.notifier = notifier;
+			currentBook = null;
+			
 			GridBagConstraints c = new GridBagConstraints();
 			c.fill = GridBagConstraints.BOTH;
 			
-			imgvwBack  = new SmallImageView(200, 300, "Back Cover" );
-			imgvwSpine = new SmallImageView(100, 300, "Book Spine" );
-			imgvwFront = new SmallImageView(200, 300, "Front Cover");
+			imgvwBack  = new SmallImageView(200, 300, "Back Cover" , "back" , createFileInBookSetter((b,filename) -> b.backCover  = filename, Field.BackCover , null));
+			imgvwSpine = new SmallImageView(100, 300, "Book Spine" , "spine", createFileInBookSetter((b,filename) -> b.spineCover = filename, Field.SpineCover, null));
+			imgvwFront = new SmallImageView(200, 300, "Front Cover", "front", createFileInBookSetter((b,filename) -> b.frontCover = filename, Field.FrontCover, this::updateFrontCoverThumb));
 			
 			c.weighty = 1; 
 			c.gridx = 0; c.weightx = 2; add(imgvwBack, c);
 			c.gridx = 1; c.weightx = 1; add(imgvwSpine, c);
 			c.gridx = 2; c.weightx = 2; add(imgvwFront, c);
+		}
+		
+		private void updateFrontCoverThumb(Book book, BufferedImage image)
+		{
+			if (book==null) return;
+			book.updateFrontCoverThumb(image);
+			
+			notifier.books.fieldChanged(this, book, Field.FrontCoverThumb);
+		}
+
+		private SmallImageView.FileInBookSetter createFileInBookSetter(BiConsumer<Book,String> setValue, Field field, BiConsumer<Book,BufferedImage> processImage)
+		{
+			return (filename, image) -> Tools.doIfNotNull(
+					currentBook,
+					b -> {
+						setValue.accept(b, filename);
+						if (processImage!=null)
+							processImage.accept(b,image);
+						notifier.books.fieldChanged(this, b, field);
+					}
+			);
+		}
+
+		void setBook(Book currentBook)
+		{
+			this.currentBook = currentBook;
+			String bookId =            Tools.getIfNotNull(this.currentBook, null, b -> b.id);
+			imgvwBack .setData(bookId, Tools.getIfNotNull(this.currentBook, null, b -> b.backCover ));
+			imgvwSpine.setData(bookId, Tools.getIfNotNull(this.currentBook, null, b -> b.spineCover));
+			imgvwFront.setData(bookId, Tools.getIfNotNull(this.currentBook, null, b -> b.frontCover));
 		}
 
 		@Override
@@ -350,37 +387,145 @@ class BookPanel extends JPanel
 	private static class SmallImageView extends ImageView
 	{
 		private static final long serialVersionUID = -4462443790556744707L;
-
-		SmallImageView(int width, int height, String title)
+		private final ModifiedImageViewContextMenu contextMenu;
+		private final FileInBookSetter setFileInBook;
+		
+		interface FileInBookSetter
 		{
-			super(width, height, null, true);
+			void setFileInBook(String filename, BufferedImage image);
+		}
+		
+		SmallImageView(int width, int height, String title, String coverPartStr, FileInBookSetter setFileInBook)
+		{
+			super(null, width, height, null, true, (iv, wPIL, isG) -> new ModifiedImageViewContextMenu(iv, wPIL, isG, coverPartStr));
+			this.setFileInBook = Objects.requireNonNull( setFileInBook );
+			
 			setBorder(BorderFactory.createTitledBorder(title));
 			activateAxes(null, false, false, false, false);
+			
+			if (getContextMenu() instanceof ModifiedImageViewContextMenu modMenu)
+			{
+				contextMenu = modMenu;
+				contextMenu.setImageFileSetter(this::setFile);
+			}
+			else
+				contextMenu = null;
 		}
 
-		void setFile(String filename)
+		void setData(String bookId, String filename)
 		{
-			if (filename==null)
-			{
-				setImage(null);
-				return;
-			}
+			if (contextMenu!=null)
+				contextMenu.setBookId(bookId, filename);
 			
-			File file;
-			try { file = FileIO.getImageFile(filename); }
-			catch (FileIOException ex) { ex.printStackTrace(); setImage(null); return; }
-			
-			if (!file.isFile())
-			{
-				setImage(null);
-				return;
-			}
-			
-			BufferedImage image;
-			try { image = ImageIO.read(file); }
-			catch (IOException ex) { ex.printStackTrace(); setImage(null); return; }
+			setImage( FileIO.loadImagefile( filename ) );
+		}
+		
+		private void setFile(String filename, BufferedImage image, boolean loadImage)
+		{
+			if (image==null && loadImage)
+				image = FileIO.loadImagefile(filename);
 			
 			setImage(image);
+			setFileInBook.setFileInBook(filename, image);
+		}
+		
+		private static class ModifiedImageViewContextMenu extends ImageViewContextMenu
+		{
+			private static final long serialVersionUID = 1369192488640827455L;
+			private final String coverPartStr;
+			private ImageFileSetter setImgFile;
+			private JMenu menuPrevImages;
+			private String bookId;
+
+			interface ImageFileSetter
+			{
+				void setImgFile(String filename, BufferedImage image, boolean loadImage);
+			}
+			
+			protected ModifiedImageViewContextMenu(ImageView imageView, boolean withPredefinedInterpolationLevel, boolean isGrouped, String coverPartStr)
+			{
+				super(imageView, withPredefinedInterpolationLevel, isGrouped);
+				this.coverPartStr = Objects.requireNonNull( coverPartStr );
+				this.setImgFile = null;
+				bookId = null;
+			}
+			
+			void setImageFileSetter(ImageFileSetter setImgFile)
+			{
+				this.setImgFile = setImgFile;
+			}
+
+			void setBookId(String bookId, String currentFilename)
+			{
+				this.bookId = bookId;
+				updatePrevImageMenu(currentFilename);
+			}
+
+			@Override
+			protected void addElementsAtFirst()
+			{
+				add(Tools.createMenuItem("Paste new image", true, null, e -> {
+					pasteImage();
+				}));
+				
+				add(menuPrevImages = new JMenu("Select one of prev. images"));
+			}
+
+			private void pasteImage()
+			{
+				BufferedImage image = ClipboardTools.getImageFromClipBoard();
+				if (image==null)
+				{
+					String title = "No image in clipboard";
+					String msg = "Sorry, no image data found in clipboard.";
+					JOptionPane.showMessageDialog(this, msg, title, JOptionPane.INFORMATION_MESSAGE);
+					return;
+				}
+				
+				String filename;
+				try
+				{
+					filename = FileIO.saveImageFile(bookId,coverPartStr,image);
+				}
+				catch (FileIOException ex)
+				{
+					//ex.printStackTrace();
+					ex.showMessageDialog(
+							this,
+							"Can't write image file",
+							"Can't write image file ( bookID: \"%s\", cover part: \"%s\" ).".formatted(bookId,coverPartStr)
+					);
+					return;
+				}
+				
+				if (filename!=null)
+				{
+					if (setImgFile!=null)
+						setImgFile.setImgFile(filename, image, false);
+					updatePrevImageMenu(filename);
+				}
+			}
+			
+			private void updatePrevImageMenu(String currentFilename)
+			{
+				String[] filenames;
+				try { filenames = FileIO.getAllImageFiles(bookId,coverPartStr); }
+				catch (FileIOException ex)
+				{
+					// ex.printStackTrace();
+					ex.showInErrorConsole("Can't get list of existing images (%s_%s*.jpg):".formatted(bookId,coverPartStr));
+					filenames = new String[0];
+				}
+				menuPrevImages.removeAll();
+				menuPrevImages.setEnabled(filenames.length>0);
+				Arrays.sort(filenames);
+				for (String filename : filenames)
+					if (filename!=null)
+						menuPrevImages.add(Tools.createCheckBoxMenuItem(filename, true, filename.equals(currentFilename), null, b -> {
+							if (setImgFile!=null)
+								setImgFile.setImgFile(filename, null, true);
+						}));
+			}
 		}
 	}
 	

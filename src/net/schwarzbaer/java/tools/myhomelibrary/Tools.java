@@ -12,8 +12,12 @@ import java.util.function.IntConsumer;
 import java.util.function.IntPredicate;
 import java.util.function.Predicate;
 
+import javax.swing.AbstractButton;
+import javax.swing.ButtonGroup;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
+import javax.swing.JCheckBoxMenuItem;
+import javax.swing.JMenuItem;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 
@@ -23,10 +27,30 @@ public class Tools
 {
 	public static JButton createButton(String text, boolean isEnabled, GeneralIcons.IconGroup icons, ActionListener al)
 	{
-		JButton comp = new JButton(text);
+		return configureAbstractButton(new JButton(text), isEnabled, null, icons, al);
+	}
+
+	public static JMenuItem createMenuItem(String text, boolean isEnabled, GeneralIcons.IconGroup icons, ActionListener al)
+	{
+		return configureAbstractButton(new JMenuItem(text), isEnabled, null, icons, al);
+	}
+
+	public static JCheckBoxMenuItem createCheckBoxMenuItem(String text, boolean isEnabled, boolean isChecked, GeneralIcons.IconGroup icons, Consumer<Boolean> setValue)
+	{
+		return configureCheckBox(new JCheckBoxMenuItem(text, isChecked), isEnabled, null, icons, setValue);
+	}
+	
+	private static <Type extends AbstractButton> Type configureCheckBox(Type comp, boolean isEnabled, ButtonGroup bg, GeneralIcons.IconGroup icons, Consumer<Boolean> setValue)
+	{
+		return configureAbstractButton(comp, isEnabled, bg, icons, setValue==null ? null : e -> setValue.accept(comp.isSelected()));
+	}
+	
+	private static <Type extends AbstractButton> Type configureAbstractButton(Type comp, boolean isEnabled, ButtonGroup bg, GeneralIcons.IconGroup icons, ActionListener al)
+	{
 		comp.setEnabled(isEnabled);
 		if (al!=null) comp.addActionListener(al);
 		if (icons!=null) icons.setIcons(comp);
+		if (bg!=null) bg.add(comp);
 		return comp;
 	}
 	
