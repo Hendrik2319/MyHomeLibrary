@@ -126,7 +126,7 @@ public class BookStorage
 
 	private enum Field
 	{
-		ID, name, book, title, bookSeries, author, releaseYear, publisher, catalogID, frontCover, spineCover, backCover
+		ID, name, book, title, bookSeries, author, release, publisher, catalogID, frontCover, spineCover, backCover
 	}
 	
 	private static String getLineValue(String line, Field field)
@@ -137,6 +137,7 @@ public class BookStorage
 		return null;
 	}
 
+	@SuppressWarnings("unused")
 	private int parseInt(String str) throws Exception
 	{
 		try
@@ -240,7 +241,7 @@ public class BookStorage
 					if ((valueStr = getLineValue(line, Field.title      ))!=null) currentBook.title       = valueStr;
 					if ((valueStr = getLineValue(line, Field.bookSeries ))!=null) currentBook.bookSeries  = bookSeries.get(valueStr);
 					if ((valueStr = getLineValue(line, Field.author     ))!=null) currentBook.authors     .add(getOrCreateAuthor(valueStr));
-					if ((valueStr = getLineValue(line, Field.releaseYear))!=null) currentBook.releaseYear = parseInt(valueStr);
+					if ((valueStr = getLineValue(line, Field.release    ))!=null) currentBook.release     = valueStr;
 					if ((valueStr = getLineValue(line, Field.publisher  ))!=null) currentBook.publisher   = getOrCreatePublisher(valueStr);
 					if ((valueStr = getLineValue(line, Field.catalogID  ))!=null) currentBook.catalogID   = valueStr;
 					if ((valueStr = getLineValue(line, Field.frontCover ))!=null) currentBook.frontCover  = valueStr;
@@ -340,7 +341,7 @@ public class BookStorage
 				if (b.title      !=null) out.printf("%s = %s%n", Field.title      , b.title        );
 				if (b.bookSeries !=null) out.printf("%s = %s%n", Field.bookSeries , b.bookSeries.id);
 				b.authors.forEach(a ->   out.printf("%s = %s%n", Field.author     , a.name()       ));
-				if (b.releaseYear>0    ) out.printf("%s = %d%n", Field.releaseYear, b.releaseYear  );
+				if (b.release    !=null) out.printf("%s = %s%n", Field.release    , b.release      );
 				if (b.publisher  !=null) out.printf("%s = %s%n", Field.publisher  , b.publisher    );
 				if (b.catalogID  !=null) out.printf("%s = %s%n", Field.catalogID  , b.catalogID    );
 				if (b.frontCover !=null) out.printf("%s = %s%n", Field.frontCover , b.frontCover   );

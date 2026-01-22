@@ -124,18 +124,18 @@ class BookPanel extends JPanel
 		cmbbxPublisher = new PublisherComboBox();
 		
 		guiConfigurator = new Tools.GUIConfigurator( fldTitle.getForeground(), fldTitle.getBackground() );
-		guiConfigurator.configureStringField(fldTitle      , str -> !str.isBlank(), str -> Tools.doIfNotNull(currentBook, b -> { b.title     = str; this.main.notifier.books.fieldChanged(this, b, Field.Title      ); }));
-		guiConfigurator.configureStringField(fldCatalogID  , null                 , str -> Tools.doIfNotNull(currentBook, b -> { b.catalogID = str; this.main.notifier.books.fieldChanged(this, b, Field.CatalogID  ); }));
-		guiConfigurator.configureIntField   (fldReleaseYear, n -> n>0             , n   -> Tools.doIfNotNull(currentBook, b -> { b.releaseYear = n; this.main.notifier.books.fieldChanged(this, b, Field.ReleaseYear); }));
+		guiConfigurator.configureStringField(fldTitle      , str -> !str.isBlank(), str -> Tools.doIfNotNull(currentBook, b -> { b.title     = str; this.main.notifier.books.fieldChanged(this, b, Field.Title    ); }));
+		guiConfigurator.configureStringField(fldCatalogID  , null                 , str -> Tools.doIfNotNull(currentBook, b -> { b.catalogID = str; this.main.notifier.books.fieldChanged(this, b, Field.CatalogID); }));
+		guiConfigurator.configureStringField(fldReleaseYear, null                 , str -> Tools.doIfNotNull(currentBook, b -> { b.release   = str; this.main.notifier.books.fieldChanged(this, b, Field.Release  ); }));
 		guiConfigurator.configureOutputField(fldAuthors);
 		guiConfigurator.configureOutputField(fldBookSeriesPos);
 		
-		labTitle       = new JLabel("Title"         +":  ");
-		labAuthors     = new JLabel("Author(s)"     +":  ");
-		labBookSeries  = new JLabel("Book Series"   +":  ");
-		labReleaseYear = new JLabel("Release (Year)"+":  ");
-		labPublisher   = new JLabel("Publisher"     +":  ");
-		labCatalogID   = new JLabel("Catalog ID"    +":  ");
+		labTitle       = new JLabel("Title"      +":  ");
+		labAuthors     = new JLabel("Author(s)"  +":  ");
+		labBookSeries  = new JLabel("Book Series"+":  ");
+		labReleaseYear = new JLabel("Release"    +":  ");
+		labPublisher   = new JLabel("Publisher"  +":  ");
+		labCatalogID   = new JLabel("Catalog ID" +":  ");
 		
 		coverImagesPanel = new CoverImagesPanel(this.main.notifier);
 		
@@ -228,7 +228,7 @@ class BookPanel extends JPanel
 		fldTitle        .setText(Tools.getIfNotNull(currentBook, "", b -> b.title));
 		fldAuthors      .setText(Tools.getIfNotNull(currentBook, "", b -> b.concatenateAuthors()));
 		fldBookSeriesPos.setText(Tools.getIfNotNull(currentBook, "", b -> Tools.getIfNotNull(b.bookSeries, "", bs -> Tools.toOrdinalString(bs.books.indexOf(b)+1) )));
-		fldReleaseYear  .setText(Tools.getIfNotNull(currentBook, "", b -> b.releaseYear<0 ? "" : Integer.toString(b.releaseYear)));
+		fldReleaseYear  .setText(Tools.getIfNotNull(currentBook, "", b -> b.release  ));
 		fldCatalogID    .setText(Tools.getIfNotNull(currentBook, "", b -> b.catalogID));
 		cmbbxBookSeries .setSelectedItem(Tools.getIfNotNull(currentBook, null, b -> b.bookSeries));
 		cmbbxPublisher  .setSelectedItem(Tools.getIfNotNull(currentBook, null, b -> b.publisher ));

@@ -156,7 +156,7 @@ class BooksTableCellRenderer implements TableCellRenderer
 					field==Book.Field.BookSeries ||
 					field==Book.Field.Publisher  ||
 					field==Book.Field.CatalogID  ||
-					field==Book.Field.ReleaseYear;
+					field==Book.Field.Release;
 		}
 
 		public void setData(Book book)
@@ -171,7 +171,7 @@ class BooksTableCellRenderer implements TableCellRenderer
 			fldAuthors    .setText("Author(s): %s" .formatted(book==null || book.authors.isEmpty()                                  ? "---" : book.concatenateAuthors()));
 			fldPublisher  .setText("Publisher: %s" .formatted(book==null || book.publisher==null || book.publisher.name().isBlank() ? "---" : book.publisher.name()    ));
 			fldCatalogID  .setText("Catalog ID: %s".formatted(book==null || book.catalogID==null || book.catalogID.isBlank()        ? "---" : book.catalogID           ));
-			fldReleaseYear.setText("Release: %s"   .formatted(book==null || book.releaseYear<0                                      ? "---" : book.releaseYear         ));
+			fldReleaseYear.setText("Release: %s"   .formatted(book==null || book.release  ==null || book.release  .isBlank()        ? "---" : book.release             ));
 		}
 	}
 }
