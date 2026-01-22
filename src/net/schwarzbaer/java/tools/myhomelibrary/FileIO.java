@@ -112,22 +112,39 @@ public class FileIO
 				param.setProgressiveMode(ImageWriteParam.MODE_DISABLED);
 			}
 			
+			image = removeAlphaChannel(image);
 			imageWriter.write(null, new IIOImage(image, null, null), param);
 		}
 		catch (FileNotFoundException ex)
 		{
 			//ex.printStackTrace();
-			throw new FileIOException(ex, "FileNotFoundException while writing image file \"%s\": %s", ex.getMessage());
+			throw new FileIOException(ex,
+					"FileNotFoundException while writing image file",
+					"   file: \"%s\"".formatted(file.getAbsolutePath()),
+					"   message: %s".formatted(ex.getMessage())
+			);
 		}
 		catch (IOException ex)
 		{
 			//ex.printStackTrace();
-			throw new FileIOException(ex, "IOException while writing image file \"%s\": %s", ex.getMessage());
+			throw new FileIOException(ex,
+					"IOException while writing image file",
+					"   file: \"%s\"".formatted(file.getAbsolutePath()),
+					"   message: %s".formatted(ex.getMessage())
+			);
 		}
 		finally
 		{
 			imageWriter.dispose();
 		}
+	}
+
+	private static BufferedImage removeAlphaChannel(BufferedImage image)
+	{
+		if (image==null) return null;
+		BufferedImage result = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_RGB);
+		result.getGraphics().drawImage(image, 0, 0, null);
+		return result;
 	}
 
 	private static ImageWriter getImageWriterByFormatName(String formatName) {
@@ -224,6 +241,8 @@ public class FileIO
 
 		public void showMessageDialog(Component window, String title, String firstLine)
 		{
+			showInErrorConsole(firstLine);
+			
 			List<String> msg = new ArrayList<>();
 			msg.add(firstLine);
 			msg.addAll(
@@ -237,7 +256,10 @@ public class FileIO
 			if (cause!=null) 
 				msg.add("   caused by %s: %s".formatted(cause.getClass().getCanonicalName(), cause.getMessage()));
 			
-			JOptionPane.showMessageDialog(window, msg.toArray(), title, JOptionPane.ERROR_MESSAGE);
+			String[] options = { "Ok", "Print Stack Trace" };
+			int result = JOptionPane.showOptionDialog(window, msg.toArray(), title, JOptionPane.DEFAULT_OPTION, JOptionPane.ERROR_MESSAGE, null, options, options[0]);
+			if (result==1)
+				printStackTrace();
 		}
 		
 		public void showInErrorConsole(String firstLine)

@@ -35,9 +35,9 @@ public class Tools
 		return configureAbstractButton(new JMenuItem(text), isEnabled, null, icons, al);
 	}
 
-	public static JCheckBoxMenuItem createCheckBoxMenuItem(String text, boolean isEnabled, boolean isChecked, GeneralIcons.IconGroup icons, Consumer<Boolean> setValue)
+	public static JCheckBoxMenuItem createCheckBoxMenuItem(String text, boolean isEnabled, boolean isChecked, ButtonGroup bg, GeneralIcons.IconGroup icons, Consumer<Boolean> setValue)
 	{
-		return configureCheckBox(new JCheckBoxMenuItem(text, isChecked), isEnabled, null, icons, setValue);
+		return configureCheckBox(new JCheckBoxMenuItem(text, isChecked), isEnabled, bg, icons, setValue);
 	}
 	
 	private static <Type extends AbstractButton> Type configureCheckBox(Type comp, boolean isEnabled, ButtonGroup bg, GeneralIcons.IconGroup icons, Consumer<Boolean> setValue)

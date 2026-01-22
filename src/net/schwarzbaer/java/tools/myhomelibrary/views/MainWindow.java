@@ -27,5 +27,8 @@ public class MainWindow extends StandardMainWindow
 				new SplitPaneDividersDefinition<>(this, ValueKey.class)
 				.add(booksTab, ValueKey.SplitPane_BooksTab)
 		);
+		
+		// TODO: add menu bar: clean up (unsused books series, unused images, ...)
+		// TODO: replace TabbedPane, if not needed finally.
 	}
 }

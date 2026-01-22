@@ -40,6 +40,7 @@ class BooksTab extends JSplitPane
 			table.tableModel.setData(this.main.bookStorage.getListOfBooks());
 			this.main.bookStorage.writeToFile();
 		}));
+		// TODO: add more elements to BooksTab.toolBar (remove book. Books of Author, Books of Series, ...)
 		
 		JPanel leftPanel = new JPanel(new BorderLayout());
 		leftPanel.add(table.tableScrollPane, BorderLayout.CENTER);

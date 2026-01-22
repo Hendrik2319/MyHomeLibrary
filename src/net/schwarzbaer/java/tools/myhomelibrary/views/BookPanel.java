@@ -13,6 +13,7 @@ import java.util.Vector;
 import java.util.function.BiConsumer;
 
 import javax.swing.BorderFactory;
+import javax.swing.ButtonGroup;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
@@ -482,6 +483,28 @@ class BookPanel extends JPanel
 					return;
 				}
 				
+				int imageWidth  = image.getWidth();
+				int imageHeight = image.getHeight();
+				if (imageHeight > 1000)
+				{
+					double f = imageHeight/1000.0;
+					int reducedWidth  = (int) Math.round( imageWidth  / f );
+					int reducedHeight = (int) Math.round( imageHeight / f );
+					
+					String title = "Big Image";
+					String[] msg = {
+							"Given immage is very big (%d x %d => height > 1000).".formatted(imageWidth, imageHeight),
+							"That's bigger, than needed. Image file will need too much space in image storage.",
+							"Should I reduce image size to %d x %d?".formatted(reducedWidth, reducedHeight)
+					};
+					int result = JOptionPane.showConfirmDialog(this, msg, title, JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE);
+					if (result == JOptionPane.YES_OPTION)
+						image = ImageView.computeScaledImageByBetterScaling(image, reducedWidth, reducedHeight, true);
+					
+					else if (result != JOptionPane.NO_OPTION)
+						return;
+				}
+				
 				String filename;
 				try
 				{
@@ -519,9 +542,10 @@ class BookPanel extends JPanel
 				menuPrevImages.removeAll();
 				menuPrevImages.setEnabled(filenames.length>0);
 				Arrays.sort(filenames);
+				ButtonGroup bg = new ButtonGroup();
 				for (String filename : filenames)
 					if (filename!=null)
-						menuPrevImages.add(Tools.createCheckBoxMenuItem(filename, true, filename.equals(currentFilename), null, b -> {
+						menuPrevImages.add(Tools.createCheckBoxMenuItem(filename, true, filename.equals(currentFilename), bg, null, b -> {
 							if (setImgFile!=null)
 								setImgFile.setImgFile(filename, null, true);
 						}));
