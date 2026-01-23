@@ -34,6 +34,7 @@ public class MyHomeLibrary
 	{
 		bookStorage.readFromFile();
 		notifier.storages.bookStorageLoaded(this);
+		//ImageImportDialog.test(mainWindow);
 	}
 	
 	public static class AppSettings extends Settings.DefaultAppSettings<AppSettings.ValueGroup, AppSettings.ValueKey>
