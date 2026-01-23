@@ -11,6 +11,7 @@ import java.util.function.Function;
 import java.util.function.IntConsumer;
 import java.util.function.IntPredicate;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import javax.swing.AbstractButton;
 import javax.swing.ButtonGroup;
@@ -22,6 +23,7 @@ import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 
 import net.schwarzbaer.java.lib.gui.GeneralIcons;
+import net.schwarzbaer.java.lib.gui.ProgressDialog;
 
 public class Tools
 {
@@ -90,6 +92,20 @@ public class Tools
 			action.accept(value);
 	}
 	
+	public static <V> V callChecked(String label, V replacement, Supplier<V> action)
+	{
+		try
+		{
+			return action.get();
+		}
+		catch (Exception ex)
+		{
+			//ex.printStackTrace();
+			System.err.printf("%s while %s: %s%n", ex.getClass().getCanonicalName(), label, ex.getMessage());
+			return replacement;
+		}
+	}
+	
 	public static void callChecked(String label, Runnable action)
 	{
 		try
@@ -101,6 +117,29 @@ public class Tools
 			//ex.printStackTrace();
 			System.err.printf("%s while %s: %s%n", ex.getClass().getCanonicalName(), label, ex.getMessage());
 		}
+	}
+
+	public static void setTaskValue(ProgressDialog pd, int value)
+	{
+		SwingUtilities.invokeLater(() -> {
+			pd.setValue(value);
+		});
+	}
+
+	public static void setTaskTitle(ProgressDialog pd, String taskTitle, int min, int value, int max)
+	{
+		SwingUtilities.invokeLater(() -> {
+			pd.setTaskTitle(taskTitle);
+			pd.setValue(min, value, max);
+		});
+	}
+
+	public static void setIndeterminateTaskTitle(ProgressDialog pd, String taskTitle)
+	{
+		SwingUtilities.invokeLater(() -> {
+			pd.setTaskTitle(taskTitle);
+			pd.setIndeterminate(true);
+		});
 	}
 
 	public static <V> boolean swap(DefaultListModel<V> list, int index1, int index2)

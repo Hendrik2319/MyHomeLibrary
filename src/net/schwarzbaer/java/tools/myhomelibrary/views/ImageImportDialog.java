@@ -13,11 +13,16 @@ import java.awt.Window;
 import java.awt.event.MouseEvent;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 import javax.swing.JButton;
 
 import net.schwarzbaer.java.lib.gui.ImageViewDialog;
+import net.schwarzbaer.java.lib.gui.ProgressDialog;
 import net.schwarzbaer.java.lib.gui.StandardDialog;
 import net.schwarzbaer.java.lib.gui.ZoomableCanvas;
 import net.schwarzbaer.java.tools.myhomelibrary.FileIO;
@@ -26,12 +31,18 @@ import net.schwarzbaer.java.tools.myhomelibrary.Tools;
 public class ImageImportDialog extends StandardDialog
 {
 	private static final long serialVersionUID = -6506180541375218481L;
+	private static final boolean DEBUG_TEST_ENGINE = false;
+	private static final boolean DEBUG_COMPUTE_DUMMY_IMAGE = false;
+	private static final boolean DEBUG_OTHER_OUTPUTS = false;
+	
 	private final Engine engine;
 	private final Step[] steps;
+	private final Step.ResizeResult lastStep;
 	private final ImportView importView;
 	private final JButton btnPrevStep;
 	private final JButton btnNextStep;
 	private final JButton btnOk;
+	
 	private BufferedImage result;
 	private int currentStep;
 
@@ -41,11 +52,11 @@ public class ImageImportDialog extends StandardDialog
 		result = null;
 		
 		importView = new ImportView();
-		engine = new Engine(originalImage);
+		engine = new Engine(originalImage, this);
 		steps = new Step[] {
 				new Step.ShowImportedImage(engine, importView),
 				new Step.DefineRange      (engine, importView),
-				new Step.ResizeResult     (engine, importView)
+				lastStep = new Step.ResizeResult(engine, importView)
 		};
 		currentStep = 0;
 		
@@ -53,7 +64,7 @@ public class ImageImportDialog extends StandardDialog
 				importView,
 				btnPrevStep = Tools.createButton("<< Previous Step", true, null, e -> switchStep(-1)),
 				btnNextStep = Tools.createButton("Next Step >>"    , true, null, e -> switchStep(+1)),
-				btnOk       = Tools.createButton("Ok"              , true, null, e -> {}),
+				btnOk       = Tools.createButton("Ok"              , true, null, e -> { result = lastStep.resultImage; closeDialog(); }),
 				Tools.createButton("Close", true, null, e -> closeDialog())
 		);
 	}
@@ -67,7 +78,9 @@ public class ImageImportDialog extends StandardDialog
 
 	private void switchStep(int inc)
 	{
-		System.out.printf("switchStep( %d -> %d )%n", currentStep, currentStep+inc);
+		if (DEBUG_OTHER_OUTPUTS)
+			System.out.printf("switchStep( %d -> %d )%n", currentStep, currentStep+inc);
+		
 		if (currentStep+inc<0 || currentStep+inc>=steps.length)
 			return;
 		
@@ -95,6 +108,7 @@ public class ImageImportDialog extends StandardDialog
 	
 	private static class Engine
 	{
+		private static final int SUBRASTER_SIZE = 10;
 		private final BufferedImage originalImage;
 		private final Point topLeft;
 		private final Point topRight;
@@ -102,9 +116,13 @@ public class ImageImportDialog extends StandardDialog
 		private final Point bottomRight;
 		private int targetHeight;
 		private int targetWidth;
+		private GeometryComputations debug_gc;
+		private final Window window;
 		
-		Engine(BufferedImage originalImage)
+		Engine(BufferedImage originalImage, Window window)
 		{
+			this.window = window;
+			debug_gc = null;
 			this.originalImage = originalImage;
 			int imageWidth  = originalImage.getWidth ();
 			int imageHeight = originalImage.getHeight();
@@ -126,9 +144,220 @@ public class ImageImportDialog extends StandardDialog
 					   topLeft.computeDist(   topRight),
 					bottomLeft.computeDist(bottomRight)
 			) );
+			
+			if (DEBUG_TEST_ENGINE)
+				debug_gc = new GeometryComputations();
+			
+			if (DEBUG_OTHER_OUTPUTS)
+				System.out.printf("TargetSize: %d x %d%n", targetWidth, targetHeight);
+		}
+		
+		BufferedImage computeImage()
+		{
+			return ProgressDialog.runWithProgressDialogRV(window, "Computing Image", 400, this::computeImage);
+		}
+		
+		private BufferedImage computeImage(ProgressDialog pd)
+		{
+			if (DEBUG_COMPUTE_DUMMY_IMAGE)
+			{
+				Tools.setIndeterminateTaskTitle(pd, "Create Dummy");
+				return createDummy();
+			}
+			
+			Tools.setIndeterminateTaskTitle(pd, "Prepare Data");
+			
+			GeometryComputations gc = new GeometryComputations();
+			
+			TargetPixel[][] targetRaster = new TargetPixel[targetWidth][targetHeight];
+			for (TargetPixel[] row : targetRaster)
+				for (int i=0; i<row.length; i++)
+					row[i] = new TargetPixel();
+			
+			Point minSource = Point.min( topLeft, topRight, bottomLeft, bottomRight );
+			Point maxSource = Point.max( topLeft, topRight, bottomLeft, bottomRight );
+			int minSourceX = (int) Math.floor( minSource.x );
+			int minSourceY = (int) Math.floor( minSource.y );
+			int maxSourceX = (int) Math.floor( maxSource.x );
+			int maxSourceY = (int) Math.floor( maxSource.y );
+			
+			Tools.setTaskTitle(pd, "Map Source Image to Target Image", 0, 0, maxSourceX-minSourceX);
+			
+			for (int sourceX=minSourceX; sourceX<=maxSourceX; sourceX++)
+			{
+				Tools.setTaskValue(pd, sourceX-minSourceX);
+				for (int sourceY=minSourceY; sourceY<=maxSourceY; sourceY++)
+					if (gc.isCandidate(sourceX,sourceY))
+					{
+						int rgb = originalImage.getRGB(sourceX, sourceY) & 0xFFFFFF;
+						PixelCoord sourcePixel = new PixelCoord(sourceX, sourceY);
+						
+						for (int iX=0; iX<SUBRASTER_SIZE; iX++)
+						{
+							double srX = sourceX + iX/(double)SUBRASTER_SIZE + 0.5;
+							for (int iY=0; iY<SUBRASTER_SIZE; iY++)
+							{
+								double srY = sourceY + iY/(double)SUBRASTER_SIZE + 0.5;
+								
+								PixelCoord targetPixelCoord = gc.computeTargetPixel(srX,srY);
+								if (targetPixelCoord!=null && targetPixelCoord.isInside(targetWidth,targetHeight))
+								{
+									TargetPixel targetPixel = targetRaster[targetPixelCoord.x][targetPixelCoord.y];
+									PixelData pixelData = targetPixel.hits.computeIfAbsent(sourcePixel, sp -> new PixelData(rgb));
+									pixelData.hits++;
+								}
+							}
+						}
+					}
+			}
+			
+			Tools.setIndeterminateTaskTitle(pd, "Create final Image");
+			
+			BufferedImage image = new BufferedImage(targetWidth, targetHeight, BufferedImage.TYPE_INT_RGB);
+			
+			for (int targetX=0; targetX<targetWidth; targetX++)
+				for (int targetY=0; targetY<targetHeight; targetY++)
+				{
+					TargetPixel targetPixel = targetRaster[targetX][targetY];
+					image.setRGB(targetX, targetY, targetPixel.computeColor() | 0xFF000000);
+				}
+			
+			return image;
+		}
+		
+		private class GeometryComputations
+		{
+			private DistToLine topLine;
+			private DistToLine leftLine;
+			private DistToLine rightLine;
+			private DistToLine bottomLine;
+
+			GeometryComputations()
+			{
+				topLine    = new DistToLine(topLeft   , topRight   , bottomLeft);
+				leftLine   = new DistToLine(topLeft   , bottomLeft , topRight  );
+				rightLine  = new DistToLine(topRight  , bottomRight, bottomLeft);
+				bottomLine = new DistToLine(bottomLeft, bottomRight, topRight  );
+			}
+			
+			private static class DistToLine
+			{
+				private Point lp1;
+				private Point lp2;
+				private double sign;
+				private Point v_lp2;
+				private double v_lp2_length;
+
+				DistToLine(Point linePoint1, Point linePoint2, Point pointAtPositiveSide)
+				{
+					this.lp1 = linePoint1;
+					this.lp2 = linePoint2;
+					v_lp2 = lp2.sub(lp1);
+					v_lp2_length = v_lp2.length();
+					
+					sign = 1;
+					if (computeDist(pointAtPositiveSide) < 0)
+						sign = -1;
+				}
+
+				double computeDist(Point p)
+				{
+					if (v_lp2_length==0)
+						return lp1.computeDist(p);
+					
+					Point v_p = p.sub(lp1);
+					double crossProd = v_p.x*v_lp2.y - v_p.y*v_lp2.x;
+					double dist = crossProd / v_lp2_length * sign;
+					return dist;
+				}
+			}
+			
+			PixelCoord computeTargetPixel(double sourceX, double sourceY)
+			{
+				Point p = new Point(sourceX, sourceY);
+				double distToTop    = topLine   .computeDist(p);
+				double distToLeft   = leftLine  .computeDist(p);
+				double distToRight  = rightLine .computeDist(p);
+				double distToBottom = bottomLine.computeDist(p);
+				double sumLeftRight = distToLeft+distToRight;
+				double sumTopBottom = distToTop+distToBottom;
+				if (sumLeftRight==0 || sumTopBottom==0)
+					return null;
+				int x = (int) Math.floor( distToLeft / sumLeftRight * targetWidth  );
+				int y = (int) Math.floor( distToTop  / sumTopBottom * targetHeight );
+				return new PixelCoord(x,y);
+			}
+
+			boolean isInside(double sourceX, double sourceY)
+			{
+				PixelCoord targetPixel = computeTargetPixel(sourceX, sourceY);
+				return targetPixel!=null && targetPixel.isInside(targetWidth,targetHeight);
+			}
+
+			boolean isCandidate(int sourceX, int sourceY)
+			{
+				Point p = new Point(sourceX, sourceY);
+				if (topLeft    .computeSquaredDist(p) < 4) return true;
+				if (topRight   .computeSquaredDist(p) < 4) return true;
+				if (bottomLeft .computeSquaredDist(p) < 4) return true;
+				if (bottomRight.computeSquaredDist(p) < 4) return true;
+				if (isInside(sourceX  , sourceY  )) return true;
+				if (isInside(sourceX+1, sourceY  )) return true;
+				if (isInside(sourceX  , sourceY+1)) return true;
+				if (isInside(sourceX+1, sourceY+1)) return true;
+				return false;
+			}
 		}
 
-		BufferedImage computeImage()
+		private static class TargetPixel
+		{
+			final Map<PixelCoord,PixelData> hits = new HashMap<>();
+
+			int computeColor()
+			{
+				long sumOfHits = hits.values()
+						.stream()
+						.collect(Collectors.summarizingInt(pd -> pd.hits))
+						.getSum();
+				if (sumOfHits==0)
+					return 0;
+				
+				double r0 = 0;
+				double g0 = 0;
+				double b0 = 0;
+				for (PixelData pd : hits.values())
+				{
+					r0 += ((pd.rgb>>16) & 0xFF) * pd.hits / (double)sumOfHits;
+					g0 += ((pd.rgb>> 8) & 0xFF) * pd.hits / (double)sumOfHits;
+					b0 += ((pd.rgb    ) & 0xFF) * pd.hits / (double)sumOfHits;
+				}
+				
+				int r = (int) Math.min(Math.max(0, Math.round(r0)), 255);
+				int g = (int) Math.min(Math.max(0, Math.round(g0)), 255);
+				int b = (int) Math.min(Math.max(0, Math.round(b0)), 255);
+				return (r << 16) | (g << 8) | b;
+			}
+		}
+		
+		private static class PixelData
+		{
+			final int rgb;
+			int hits;
+			PixelData(int rgb)
+			{
+				this.rgb = rgb;
+				hits = 0;
+			}
+		}
+		private record PixelCoord(int x, int y)
+		{
+			boolean isInside(int width, int height)
+			{
+				return 0<=x && x<width && 0<=y && y<height;
+			}
+		}
+
+		private BufferedImage createDummy()
 		{
 			BufferedImage image = new BufferedImage(targetWidth, targetHeight, BufferedImage.TYPE_INT_RGB);
 			Graphics2D g2 = image.createGraphics();
@@ -143,9 +372,6 @@ public class ImageImportDialog extends StandardDialog
 			g2.drawLine(targetWidth, 0, 0, targetHeight);
 			g2.setColor(Color.BLUE);
 			g2.drawOval(0, 0, targetWidth, targetHeight);
-			
-			// TODO: Engine.computeImage()
-			
 			return image;
 		}
 	}
@@ -171,6 +397,32 @@ public class ImageImportDialog extends StandardDialog
 			this.x = p.x;
 			this.y = p.y;
 		}
+		
+		static Point min(Point... points)
+		{
+			Point min = new Point(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY);
+			for (Point p : points)
+			{
+				if (min.x > p.x)
+					min.x = p.x;
+				if (min.y > p.y)
+					min.y = p.y;
+			}
+			return min;
+		}
+		
+		static Point max(Point... points)
+		{
+			Point max = new Point(Double.NEGATIVE_INFINITY, Double.NEGATIVE_INFINITY);
+			for (Point p : points)
+			{
+				if (max.x < p.x)
+					max.x = p.x;
+				if (max.y < p.y)
+					max.y = p.y;
+			}
+			return max;
+		}
 
 		static Point between(double f, Point p1, Point p2)
 		{
@@ -192,12 +444,17 @@ public class ImageImportDialog extends StandardDialog
 			return new Point( x*f, y*f );
 		}
 
+		double length()
+		{
+			return Math.sqrt(x*x+y*y);
+		}
+
 		double computeDist(Point p)
 		{
 			return Math.sqrt(computeSquaredDist(p));
 		}
 
-		private double computeSquaredDist(Point p)
+		double computeSquaredDist(Point p)
 		{
 			return (x-p.x)*(x-p.x)+(y-p.y)*(y-p.y);
 		}
@@ -364,6 +621,74 @@ public class ImageImportDialog extends StandardDialog
 			}
 
 			@Override
+			void mouseMoved(MouseEvent e)
+			{
+				super.mouseMoved(e);
+				if (DEBUG_TEST_ENGINE)
+					computeAndShowTestValues(e);
+			}
+
+			private void computeAndShowTestValues(MouseEvent e)
+			{
+				if (viewState.isOk() && engine.debug_gc!=null)
+				{
+					java.awt.Point mouse = e.getPoint();
+					Point p = viewState.convertPos_ScreenToAngle(mouse);
+					
+					double dist2Top    = Tools.callChecked("dist2Top"   , 0.0, () -> engine.debug_gc.   topLine.computeDist(p) );
+					double dist2Left   = Tools.callChecked("dist2Left"  , 0.0, () -> engine.debug_gc.  leftLine.computeDist(p) );
+					double dist2Right  = Tools.callChecked("dist2Right" , 0.0, () -> engine.debug_gc. rightLine.computeDist(p) );
+					double dist2Bottom = Tools.callChecked("dist2Bottom", 0.0, () -> engine.debug_gc.bottomLine.computeDist(p) );
+					
+					Engine.PixelCoord targetPixel = Tools.callChecked("computeTargetPixel", null, () -> engine.debug_gc.computeTargetPixel(p.x, p.y));
+					
+					boolean isInside = Tools.callChecked("isInside", false, () -> engine.debug_gc.isInside(p.x, p.y) );
+					
+					int x = (int) Math.floor( p.x );
+					int y = (int) Math.floor( p.y );
+					boolean isCandidate = Tools.callChecked("isCandidate", false, () -> engine.debug_gc.isCandidate(x, y) );
+					
+					System.out.printf(Locale.ENGLISH, "Engine-Test:"
+							+ " mouse:%10s -> source:%15s"
+							+ " -> {"
+							+ " targetPixel:%10s, isInside:%5s, isCandidate:%5s,"
+							+ " top:%8.2f,"
+							+ " left:%8.2f,"
+							+ " right:%8.2f,"
+							+ " bottom:%8.2f"
+							+ " } %n",
+							toString(mouse), toString(p),
+							toString(targetPixel), isInside, isCandidate,
+							dist2Top,
+							dist2Left,
+							dist2Right,
+							dist2Bottom
+					);
+				}
+			}
+
+			private Object toString(Engine.PixelCoord p) // max length: 10
+			{
+				if (p==null)
+					return "<null>";
+				return "%dx%d".formatted(p.x,p.y);
+			}
+
+			private String toString(Point p) // max length: 15 
+			{
+				if (p==null)
+					return "<null>";
+				return String.format(Locale.ENGLISH, "%1.2fx%1.2f", p.x, p.y);
+			}
+
+			private String toString(java.awt.Point p) // max length: 10
+			{
+				if (p==null)
+					return "<null>";
+				return "%dx%d".formatted(p.x,p.y);
+			}
+
+			@Override
 			void mouseReleased(MouseEvent e)
 			{
 				if (dragDelta != null)
@@ -414,25 +739,25 @@ public class ImageImportDialog extends StandardDialog
 
 		static class ResizeResult extends Step
 		{
-			private BufferedImage image;
+			private BufferedImage resultImage;
 
 			ResizeResult(Engine engine, ImportView view)
 			{
 				super("Resize Result", true, engine, view, new Handles(engine).toArray());
-				image = null;
+				resultImage = null;
 			}
 			
 			@Override
 			void activate()
 			{
-				image = engine.computeImage();
+				resultImage = engine.computeImage();
 				Handles.resetHandles(engine, handles);
 			}
 
 			@Override
 			BufferedImage getImage()
 			{
-				return image;
+				return resultImage;
 			}
 
 			@Override
@@ -440,7 +765,7 @@ public class ImageImportDialog extends StandardDialog
 			{
 				if (dragDelta != null)
 				{
-					image = engine.computeImage();
+					resultImage = engine.computeImage();
 					Handles.resetHandles(engine, handles);
 				}
 				super.mouseReleased(e);
