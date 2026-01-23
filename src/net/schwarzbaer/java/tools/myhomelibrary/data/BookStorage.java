@@ -92,6 +92,14 @@ public class BookStorage
 			book.bookSeries.books.add(book);
 	}
 
+	public void removeBook(Book book)
+	{
+		books.remove(book.id);
+		
+		if (book.bookSeries!=null)
+			book.bookSeries.books.remove(book);
+	}
+
 	public Book createBook()
 	{
 		return createIdBased(books, Book::new, bookIDs);

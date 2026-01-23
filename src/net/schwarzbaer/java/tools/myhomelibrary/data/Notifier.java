@@ -40,11 +40,13 @@ public class Notifier
 		@Override public void fieldsChanged (Object source, Set<Book> books, Set<Book.Field> fields) { forEach("fieldsChanged" , source, l -> l.fieldsChanged (source, books, fields)); }
 		@Override public void authorAdded   (Object source, Author    author                       ) { forEach("authorAdded"   , source, l -> l.authorAdded   (source, author       )); }
 		@Override public void publisherAdded(Object source, Publisher publisher                    ) { forEach("publisherAdded", source, l -> l.publisherAdded(source, publisher    )); }
+		@Override public void bookRemoved   (Object source, Book      book                         ) { forEach("bookRemoved"   , source, l -> l.bookRemoved   (source, book         )); }
 	}
 	
 	public static class BookSeriesChangeController extends Controller<BookSeriesChangeListener> implements BookSeriesChangeListener
 	{
-		// t.b.d.
+		@Override public void fieldChanged (Object source,     BookSeries  bookSeries,     BookSeries.Field  field ) { forEach("fieldChanged" , source, l -> l.fieldChanged (source, bookSeries, field )); }
+		@Override public void fieldsChanged(Object source, Set<BookSeries> bookSeries, Set<BookSeries.Field> fields) { forEach("fieldsChanged", source, l -> l.fieldsChanged(source, bookSeries, fields)); }
 	}
 	
 	public static class StorageController extends Controller<StorageListener> implements StorageListener
@@ -58,6 +60,7 @@ public class Notifier
 		void fieldsChanged(Object source, Set<Book> books, Set<Book.Field> fields);
 		void authorAdded   (Object source, Author    author   );
 		void publisherAdded(Object source, Publisher publisher);
+		void bookRemoved   (Object source, Book      book     );
 		
 		public static class Adapter implements BookChangeListener
 		{
@@ -65,16 +68,19 @@ public class Notifier
 			@Override public void fieldsChanged(Object source, Set<Book> books, Set<Book.Field> fields) {}
 			@Override public void authorAdded   (Object source, Author    author   ) {}
 			@Override public void publisherAdded(Object source, Publisher publisher) {}
+			@Override public void bookRemoved   (Object source, Book      book     ) {}
 		}
 	}
 	
 	public interface BookSeriesChangeListener
 	{
-		// t.b.d.
+		void fieldChanged (Object source,     BookSeries  bookSeries,     BookSeries.Field  field );
+		void fieldsChanged(Object source, Set<BookSeries> bookSeries, Set<BookSeries.Field> fields);
 		
 		public static class Adapter implements BookSeriesChangeListener
 		{
-			// t.b.d.
+			@Override public void fieldChanged (Object source,     BookSeries  bookSeries,     BookSeries.Field  field ) {}
+			@Override public void fieldsChanged(Object source, Set<BookSeries> bookSeries, Set<BookSeries.Field> fields) {}
 		}
 	}
 	

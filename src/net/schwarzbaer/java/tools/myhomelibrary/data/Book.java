@@ -36,6 +36,13 @@ public class Book implements UniqueID.IdBased<Book>
 		authors = new ArrayList<>();
 	}
 
+	public String getTitle()
+	{
+		return title!=null && !title.isBlank()
+				? "\"%s\"".formatted(title)
+				: "[ID:%s]".formatted(id);
+	}
+
 	@Override
 	public String getID()
 	{
@@ -74,11 +81,11 @@ public class Book implements UniqueID.IdBased<Book>
 				imageWidth /(double)Book.FRONTCOVERTHUMB_MAXWIDTH ,
 				imageHeight/(double)Book.FRONTCOVERTHUMB_MAXHEIGHT
 		);
-		if (f < 1) // imageWidth && imageHeight are lower than FRONTCOVERTHUMB values
+		if (f < 1) // imageWidth && imageHeight are smaller than FRONTCOVERTHUMB values
 			return image;
 		
 		int newWidth  = Math.min( (int) Math.round( imageWidth  / f ), Book.FRONTCOVERTHUMB_MAXWIDTH  );
 		int newHeight = Math.min( (int) Math.round( imageHeight / f ), Book.FRONTCOVERTHUMB_MAXHEIGHT );
-		return ImageView.computeScaledImageByBetterScaling(image, newWidth, newHeight, true);
+		return ImageView.computeScaledImageByAreaSampling(image, newWidth, newHeight, true);
 	}
 }

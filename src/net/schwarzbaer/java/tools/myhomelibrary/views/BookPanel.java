@@ -235,12 +235,12 @@ class BookPanel extends JPanel
 		
 		setIgnoreInputEvents(false);
 		
-		updateBtnChangeBSPos();
-		
 		coverImagesPanel.setBook(currentBook);
 		
 		for (Component comp : getComponents())
 			comp.setEnabled(currentBook != null && isEnabled());
+		
+		updateBtnChangeBSPos();
 	}
 
 	private void setIgnoreInputEvents(boolean ignoreInputEvents)
@@ -499,7 +499,7 @@ class BookPanel extends JPanel
 					};
 					int result = JOptionPane.showConfirmDialog(this, msg, title, JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE);
 					if (result == JOptionPane.YES_OPTION)
-						image = ImageView.computeScaledImageByBetterScaling(image, reducedWidth, reducedHeight, true);
+						image = ImageView.computeScaledImageByAreaSampling(image, reducedWidth, reducedHeight, true);
 					
 					else if (result != JOptionPane.NO_OPTION)
 						return;

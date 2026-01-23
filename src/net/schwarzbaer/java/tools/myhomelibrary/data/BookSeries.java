@@ -5,6 +5,10 @@ import java.util.Vector;
 
 public class BookSeries implements UniqueID.IdBased<BookSeries>
 {
+	public enum Field {
+		Name, Books
+	}
+	
 	public final String id;
 	public       String name = null;
 	public final Vector<Book> books;
