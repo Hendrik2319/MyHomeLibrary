@@ -50,9 +50,14 @@ public class BookStorage
 		return getList(books, b -> Tools.getIfNotNull(b.title, "<unnamed>"));
 	}
 
+	public List<Book> getListOfBooks(Predicate<Book> filter)
+	{
+		return getList(books, b -> Tools.getIfNotNull(b.title, "<unnamed>"), filter);
+	}
+
 	public List<Book> getListOfBooks(Author author)
 	{
-		return getList(books, b -> Tools.getIfNotNull(b.title, "<unnamed>"), b -> b.authors.contains(author));
+		return getListOfBooks(b -> b.authors.contains(author));
 	}
 
 	public List<BookSeries> getListOfBookSeries()
@@ -114,7 +119,7 @@ public class BookStorage
 
 	public Book createBook()
 	{
-		return createIdBased(books, Book::new, bookIDs);
+		return createIdBased(books, id -> new Book(id,true), bookIDs);
 	}
 	
 	public BookSeries createBookSeries()
@@ -243,7 +248,7 @@ public class BookStorage
 					else if (expectingBook)
 					{
 						bookIDs.addKnownID(valueStr);
-						currentBook = createIdBased(books, Book::new, valueStr);
+						currentBook = createIdBased(books, id -> new Book(id,false), valueStr);
 						currentBookSeries = null;
 						currentBookList = null;
 						expectingBook = false;

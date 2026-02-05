@@ -108,7 +108,7 @@ class BooksTab extends JSplitPane
 	private enum ListType
 	{
 		AllBooks     ("All Books"),
-		//NewBooks     ("Recently Added Books"),
+		NewBooks     ("Recently Added Books"),
 		BooksOfAuthor("Books of Author"),
 		BooksOfSeries("Books of Series"),
 		;
@@ -137,6 +137,11 @@ class BooksTab extends JSplitPane
 			Selector createForAll()
 			{
 				return new Selector(bookStorage, null, null, () -> bookStorage.getListOfBooks());
+			}
+			
+			Selector createForNew()
+			{
+				return new Selector(bookStorage, null, null, () -> bookStorage.getListOfBooks(b -> b.recentlyCreated));
 			}
 		}
 
@@ -192,6 +197,7 @@ class BooksTab extends JSplitPane
 				switch (currentListType)
 				{
 				case AllBooks:
+				case NewBooks:
 					break;
 					
 				case BooksOfAuthor:
@@ -225,6 +231,10 @@ class BooksTab extends JSplitPane
 				{
 				case AllBooks:
 					currentSelector = selectorFactory.createForAll();
+					break;
+					
+				case NewBooks:
+					currentSelector = selectorFactory.createForNew();
 					break;
 					
 				case BooksOfAuthor:

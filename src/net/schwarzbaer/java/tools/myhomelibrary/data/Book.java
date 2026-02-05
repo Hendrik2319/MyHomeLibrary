@@ -19,6 +19,7 @@ public class Book implements UniqueID.IdBased<Book>
 	}
 	
 	public final String id;
+	public final boolean recentlyCreated;
 	public String title = null;
 	public final List<Author> authors;
 	public Publisher  publisher = null;
@@ -30,9 +31,10 @@ public class Book implements UniqueID.IdBased<Book>
 	public String     spineCover = null;
 	public BufferedImage frontCoverThumb = null;
 
-	Book(String id)
+	Book(String id, boolean recentlyCreated)
 	{
 		this.id = Objects.requireNonNull( id );
+		this.recentlyCreated = recentlyCreated;
 		authors = new ArrayList<>();
 	}
 
