@@ -15,6 +15,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 import net.schwarzbaer.java.tools.myhomelibrary.FileIO;
 import net.schwarzbaer.java.tools.myhomelibrary.FileIO.FileIOException;
@@ -49,6 +50,11 @@ public class BookStorage
 		return getList(books, b -> Tools.getIfNotNull(b.title, "<unnamed>"));
 	}
 
+	public List<Book> getListOfBooks(Author author)
+	{
+		return getList(books, b -> Tools.getIfNotNull(b.title, "<unnamed>"), b -> b.authors.contains(author));
+	}
+
 	public List<BookSeries> getListOfBookSeries()
 	{
 		return getList(bookSeries, bs -> Tools.getIfNotNull(bs.name, "<unnamed>"));
@@ -66,9 +72,15 @@ public class BookStorage
 	
 	private <V> List<V> getList(Map<String,V> map, Function<V,String> getName)
 	{
+		return getList(map, getName, null);
+	}
+	
+	private <V> List<V> getList(Map<String,V> map, Function<V,String> getName, Predicate<V> filter)
+	{
 		return map
 				.values()
 				.stream()
+				.filter(filter==null ? v->true : filter)
 				.sorted( getCompByName(getName) )
 				.toList();
 	}

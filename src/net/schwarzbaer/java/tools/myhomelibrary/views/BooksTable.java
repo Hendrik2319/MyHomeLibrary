@@ -65,6 +65,7 @@ public class BooksTable extends JTable
 		
 		void setData(List<Book> data)
 		{
+			System.out.printf("BooksTableModel.setData( %s )%n", data==null ? "<null>" : "%d Books".formatted(data.size()));
 			this.data = data;
 			fireTableUpdate();
 		}
