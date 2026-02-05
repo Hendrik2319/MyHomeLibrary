@@ -1,10 +1,14 @@
 package net.schwarzbaer.java.tools.myhomelibrary.views;
 
 import java.awt.BasicStroke;
+import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Cursor;
+import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.Shape;
@@ -19,10 +23,18 @@ import java.util.Map;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+import javax.swing.BorderFactory;
+import javax.swing.ButtonGroup;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JToggleButton;
 import javax.swing.SwingUtilities;
 
+import net.schwarzbaer.java.lib.gui.GeneralIcons.GrayCommandIcons;
+import net.schwarzbaer.java.lib.gui.ImageTools;
+import net.schwarzbaer.java.lib.gui.ImageView;
 import net.schwarzbaer.java.lib.gui.ImageViewDialog;
 import net.schwarzbaer.java.lib.gui.ProgressDialog;
 import net.schwarzbaer.java.lib.gui.StandardDialog;
@@ -30,6 +42,7 @@ import net.schwarzbaer.java.lib.gui.Tables;
 import net.schwarzbaer.java.lib.gui.ZoomableCanvas;
 import net.schwarzbaer.java.lib.system.DateTimeFormatter;
 import net.schwarzbaer.java.tools.myhomelibrary.FileIO;
+import net.schwarzbaer.java.tools.myhomelibrary.MyHomeLibrary;
 import net.schwarzbaer.java.tools.myhomelibrary.Tools;
 
 public class ImageImportDialog extends StandardDialog
@@ -39,114 +52,91 @@ public class ImageImportDialog extends StandardDialog
 	private static final boolean DEBUG_COMPUTE_DUMMY_IMAGE = false;
 	private static final boolean DEBUG_OTHER_OUTPUTS = false;
 	
-	private final Engine engine;
-	private final Step[] steps;
-	private final ResizeResult lastStep;
+	private final BufferedImage originalImage;
 	private final ImportView importView;
-	private final JButton btnPrevStep;
-	private final JButton btnNextStep;
-	private final JButton btnOk;
-	private final JComboBox<Integer> cmbbxHitPointCount;
 	
 	private BufferedImage result;
-	private int  currentStepIndex;
-	private Step currentStep;
+	private ImageEditor currentEditor;
 
-	ImageImportDialog(Window window, BufferedImage originalImage)
+	ImageImportDialog(Window window, BufferedImage originalImage, Scenario.Type scenarioType, int width, int height)
 	{
 		super(window, "Image Import");
+		this.originalImage = originalImage;
 		result = null;
-		
 		importView = new ImportView();
-		engine = new Engine(originalImage, this);
-		steps = new Step[] {
-				new ShowImportedImage(),
-				new DefineRange      (),
-				lastStep = new ResizeResult()
-		};
 		
-		cmbbxHitPointCount = new JComboBox<>(new Integer[] {3,4,5,6,7,8,9,10});
-		cmbbxHitPointCount.setRenderer(new Tables.NonStringRenderer<>(obj -> {
-			if (obj instanceof Integer n)
-				return "%d x %d (%d)".formatted(n,n,n*n);
-			return obj==null ? "----" : obj.toString();
-		}, 70));
-		cmbbxHitPointCount.setSelectedItem(engine.SUBRASTER_SIZE);
-		cmbbxHitPointCount.addActionListener(e -> {
-			Integer size = cmbbxHitPointCount.getItemAt(cmbbxHitPointCount.getSelectedIndex());
-			if (size!=null) engine.SUBRASTER_SIZE = size;
-			if (currentStep==lastStep)
-				SwingUtilities.invokeLater(lastStep::updateImage);
-		});
+		Scenario scenario = null;
+		if (scenarioType!=null)
+			switch (scenarioType)
+			{
+				case FullImageManipulation: scenario = new FullImageManipulation(); break;
+				case ImageCutOut          : scenario = new ImageCutOut(); break;
+			};
+		if (scenario == null)
+			throw new IllegalArgumentException();
 		
-		currentStepIndex = 0;
-		currentStep = null;
+		JPanel toolbar = scenario.createDialogBottomToolbar();
+		toolbar.setBorder(BorderFactory.createEmptyBorder(0,5,5,5));
 		
-		createGUI(
-				importView,
-				cmbbxHitPointCount,
-				btnPrevStep = Tools.createButton("<< Previous Step", true, null, e -> switchStep(-1)),
-				btnNextStep = Tools.createButton("Next Step >>"    , true, null, e -> switchStep(+1)),
-				btnOk       = Tools.createButton("Ok"              , true, null, e -> { result = lastStep.resultImage; closeDialog(); }),
-				Tools.createButton("Close", true, null, e -> closeDialog())
-		);
+		JPanel contentPane = new JPanel(new BorderLayout());
+		contentPane.add(importView, BorderLayout.CENTER);
+		contentPane.add(toolbar, BorderLayout.SOUTH);
+		
+		createGUI(contentPane, new Dimension(width, height));
+		
+		setEditor(scenario.getInitialEditor());
 	}
 
-	@Override
-	public void showDialog()
+	private void setEditor(ImageEditor editor)
 	{
-		switchStep(-currentStepIndex); // return to step 0
-		super.showDialog(Position.PARENT_CENTER);
-	}
-
-	private void switchStep(int inc)
-	{
-		if (DEBUG_OTHER_OUTPUTS)
-			System.out.printf("switchStep( %d -> %d )%n", currentStepIndex, currentStepIndex+inc);
-		
-		if (currentStepIndex+inc<0 || currentStepIndex+inc>=steps.length)
-			return;
-		
-		currentStepIndex += inc;
-		currentStep = steps[currentStepIndex];
-		currentStep.activate();
+		this.currentEditor = editor;
+		currentEditor.activate();
 		updateWindowTitle();
-		importView.setStep(currentStep);
-		btnPrevStep.setEnabled(0 < currentStepIndex);
-		btnNextStep.setEnabled(currentStepIndex+1 < steps.length);
-		btnOk      .setEnabled(currentStepIndex+1 == steps.length);
+		importView.setEditor(currentEditor);
 	}
 
 	private void updateWindowTitle()
 	{
-		if (currentStep==null)
+		if (currentEditor==null)
 			setTitle("Image Import");
 		else
 		{
-			String extraTitleStr = currentStep.getExtraTitleStr();
+			String extraTitleStr = currentEditor.getExtraTitleStr();
 			if (extraTitleStr==null)
-				setTitle("Image Import - %s".formatted(currentStep.title));
+				setTitle("Image Import - %s".formatted(currentEditor.title));
 			else
-				setTitle("Image Import - %s: %s".formatted(currentStep.title, extraTitleStr));
+				setTitle("Image Import - %s: %s".formatted(currentEditor.title, extraTitleStr));
 		}
 	}
 
 	public static void test(Window window)
 	{
 		BufferedImage image = FileIO.loadImagefile("import.test.jpg");
-		//new ImageViewDialog(window, image, "Loaded Image", 800, 500).setVisible(true);
+		new ImageViewDialog(window, image, "Loaded Image", 800, 500, true).setVisible(true);
 		
-		ImageImportDialog dlg = new ImageImportDialog(window, image);
-		dlg.showDialog();
+		BufferedImage result = showDialog(window, image);
 		
-		new ImageViewDialog(window, dlg.result, "Result Image", 500, 800, true).setVisible(true);
+		new ImageViewDialog(window, result, "Result Image", 500, 800, true).setVisible(true);
 		System.exit(0);
 	}
-	
-	private static class Engine
+
+	public static BufferedImage showDialog(Window window, BufferedImage image)
+	{
+		return showDialog(window, image, Scenario.Type.FullImageManipulation, 800,800);
+	}
+
+	private static BufferedImage showDialog(Window window, BufferedImage image, Scenario.Type scenario, int width, int height)
+	{
+		ImageImportDialog dlg = new ImageImportDialog(window, image, scenario, width, height);
+		dlg.showDialog();
+		return dlg.result;
+	}
+
+	private static class CutOutEngine
 	{
 		private int SUBRASTER_SIZE = 5;
-		private final BufferedImage originalImage;
+		private final Window window;
+		private final BufferedImage image;
 		private final Point topLeft;
 		private final Point topRight;
 		private final Point bottomLeft;
@@ -154,15 +144,14 @@ public class ImageImportDialog extends StandardDialog
 		private int targetHeight;
 		private int targetWidth;
 		private GeometryComputations debug_gc;
-		private final Window window;
 		
-		Engine(BufferedImage originalImage, Window window)
+		CutOutEngine(Window window, BufferedImage image)
 		{
 			this.window = window;
+			this.image = image;
 			debug_gc = null;
-			this.originalImage = originalImage;
-			int imageWidth  = originalImage.getWidth ();
-			int imageHeight = originalImage.getHeight();
+			int imageWidth  = image.getWidth ();
+			int imageHeight = image.getHeight();
 			
 			topLeft     = new Point( imageWidth*0.25, imageHeight*0.25 );
 			topRight    = new Point( imageWidth*0.75, imageHeight*0.25 );
@@ -228,7 +217,7 @@ public class ImageImportDialog extends StandardDialog
 				for (int sourceY=minSourceY; sourceY<=maxSourceY; sourceY++)
 					if (gc.isCandidate(sourceX,sourceY))
 					{
-						int rgb = originalImage.getRGB(sourceX, sourceY) & 0xFFFFFF;
+						int rgb = image.getRGB(sourceX, sourceY) & 0xFFFFFF;
 						PixelCoord sourcePixel = new PixelCoord(sourceX, sourceY);
 						
 						for (int iX=0; iX<SUBRASTER_SIZE; iX++)
@@ -505,12 +494,12 @@ public class ImageImportDialog extends StandardDialog
 		}
 	}
 	
-	private class Step
+	private abstract class ImageEditor
 	{
 		static final BasicStroke STROKE_DASHED_LINE = new BasicStroke(1,BasicStroke.CAP_ROUND,BasicStroke.JOIN_ROUND,1,new float[]{4,6},0);
 		
 		final String title;
-		final boolean isEditor;
+		final boolean needsViewInEditorMode;
 		final ImportView.ViewState viewState;
 		final ImportView.Handle[] handles;
 		ImportView.Handle highlightedHandle;
@@ -519,10 +508,10 @@ public class ImageImportDialog extends StandardDialog
 		boolean isInside;
 
 
-		Step(String title, boolean isEditor, ImportView.Handle[] handles)
+		ImageEditor(String title, boolean needsViewInEditorMode, ImportView.Handle[] handles)
 		{
 			this.title = title;
-			this.isEditor = isEditor;
+			this.needsViewInEditorMode = needsViewInEditorMode;
 			this.viewState = importView.getViewState();
 			this.handles = handles;
 			highlightedHandle = null;
@@ -569,7 +558,7 @@ public class ImageImportDialog extends StandardDialog
 		}
 
 		void activate() {}
-		BufferedImage getImage() { return engine.originalImage; }
+		abstract BufferedImage getImage();
 		protected void drawLines(Graphics2D g2, int x, int y, int width, int height) {}
 		protected String getExtraTitleStr() { return null; }
 
@@ -640,306 +629,598 @@ public class ImageImportDialog extends StandardDialog
 		}
 	}
 	
-	private class ShowImportedImage extends Step
+	private abstract class Scenario
 	{
-		ShowImportedImage()
+		enum Type { FullImageManipulation, ImageCutOut }
+		abstract JPanel createDialogBottomToolbar();
+		abstract ImageEditor getInitialEditor();
+	}
+
+	private class FullImageManipulation extends Scenario
+	{
+		private final ShowImportedImage editor;
+		private BufferedImage image;
+		
+		FullImageManipulation()
 		{
-			super("Imported Image", false, null);
+			image = originalImage;
+			editor = new ShowImportedImage();
+		}
+		
+		private class DialogBottomToolbar extends JPanel
+		{
+			private static final long serialVersionUID = -4770056455976201592L;
+			private final JButton btnCutOut  ;
+			private final JButton btnRot90   ;
+			private final JButton btnRot90CCW;
+			private final JButton btnRot180  ;
+			private final JButton btnRedSize ;
+			private final JButton btnReset   ;
+			private final JButton btnOk      ;
+			private final JButton btnCancel  ;
+
+			DialogBottomToolbar()
+			{
+				super(new GridBagLayout());
+				GridBagConstraints c = new GridBagConstraints();
+				c.fill = GridBagConstraints.BOTH;
+				
+				add(btnCutOut   = Tools.createButton("Cut Out"      , true, GrayCommandIcons.IconGroup.Cut      , e -> cutOut()            ), c);
+				add(btnRot90    = Tools.createButton("90°"          , true, GrayCommandIcons.IconGroup.Reload   , e -> rotateImage90(false)), c);
+				add(btnRot90CCW = Tools.createButton("90°"          , true, GrayCommandIcons.IconGroup.ReloadCCW, e -> rotateImage90(true )), c);
+				add(btnRot180   = Tools.createButton("180°"         , true, GrayCommandIcons.IconGroup.Reload   , e -> rotateImage180()    ), c);
+				add(btnRedSize  = Tools.createButton("Reduce Size"  , true, null, e -> reduceSize()), c);
+				add(btnReset    = Tools.createButton("Reset"        , true, null, e -> { image = originalImage; importView.reset(); updateBtns(); }), c);
+				c.weightx = 1;
+				add(new JLabel(), c);
+				c.weightx = 0;
+				add(btnOk       = Tools.createButton("Ok"           , true, null, e -> { result = image; closeDialog(); }), c);
+				add(btnCancel   = Tools.createButton("Cancel Import", true, null, e -> closeDialog()), c);
+				
+				updateBtns();
+			}
+			
+			void updateBtns()
+			{
+				int imageWidth  = image==null ? -1 : image.getWidth();
+				int imageHeight = image==null ? -1 : image.getHeight();
+				double f = Math.max(imageWidth, imageHeight) / Tools.IMAGE_REDUCTION__MAX_SIZE;
+				int reducedWidth  = (int) Math.round( imageWidth  / f );
+				int reducedHeight = (int) Math.round( imageHeight / f );
+				
+				btnRedSize.setText(
+						image == null || f <= Tools.IMAGE_REDUCTION__THRESHOLD
+							? "Reduce Size"
+							: "Reduce Size to %d x %d".formatted(reducedWidth, reducedHeight)
+				);
+				
+				btnCutOut  .setEnabled(image!=null);
+				btnRot90   .setEnabled(image!=null);
+				btnRot90CCW.setEnabled(image!=null);
+				btnRot180  .setEnabled(image!=null);
+				btnRedSize .setEnabled(image!=null  && f > Tools.IMAGE_REDUCTION__THRESHOLD);
+				btnReset   .setEnabled(image!=null);
+				btnOk      .setEnabled(image!=null);
+				btnCancel  .setEnabled(true);
+			}
+
+			private void reduceSize()
+			{
+				int imageWidth  = image.getWidth();
+				int imageHeight = image.getHeight();
+				double f = Math.max(imageWidth, imageHeight) / Tools.IMAGE_REDUCTION__MAX_SIZE;
+				if (f > Tools.IMAGE_REDUCTION__THRESHOLD)
+				{
+					int reducedWidth  = (int) Math.round( imageWidth  / f );
+					int reducedHeight = (int) Math.round( imageHeight / f );
+					image = ImageView.computeScaledImageByAreaSampling(image, reducedWidth, reducedHeight, true);
+					importView.reset();
+					updateBtns();
+				}
+			}
+
+			private void cutOut()
+			{
+				int width  = ImageImportDialog.this.getWidth();
+				int height = ImageImportDialog.this.getHeight();
+				BufferedImage result = showDialog(ImageImportDialog.this, image, Scenario.Type.ImageCutOut, width-50, height-100);
+				if (result!=null)
+				{
+					image = result;
+					importView.reset();
+					updateBtns();
+				}
+			}
+
+			private void rotateImage180()
+			{
+				image = ImageTools.rotate180(image);
+				importView.reset();
+				updateBtns();
+			}
+
+			private void rotateImage90(boolean counterClockWise)
+			{
+				if (counterClockWise)
+					image = ImageTools.rotate90_counterclockwise(image);
+				else
+					image = ImageTools.rotate90_clockwise(image);
+				importView.reset(); 
+				updateBtns();
+			}
+		}
+		
+		@Override
+		JPanel createDialogBottomToolbar()
+		{
+			return new DialogBottomToolbar();
+		}
+
+		@Override
+		ImageEditor getInitialEditor()
+		{
+			return editor;
+		}
+
+		private class ShowImportedImage extends ImageEditor
+		{
+			ShowImportedImage()
+			{
+				super("Imported Image", false, null);
+			}
+
+			@Override
+			BufferedImage getImage()
+			{
+				return image;
+			}
 		}
 	}
 
-	private class DefineRange extends Step
+	private class ImageCutOut extends Scenario
 	{
-		DefineRange()
+		private final CutOutEngine engine;
+		private final DefineRange defineRangeEditor;
+		private final ResizeResult resizeResultEditor;
+		private ImageEditor currentEditor;
+		private DialogBottomToolbar toolbar;
+		
+		ImageCutOut()
 		{
-			super(
-					"Define Range", true,
-					new ImportView.Handle[] {
-							new ImportView.Handle("Top-Left"    +" Corner", Cursor.MOVE_CURSOR, engine.topLeft    .x, engine.topLeft    .y, engine.topLeft    ::set),
-							new ImportView.Handle("Top-Right"   +" Corner", Cursor.MOVE_CURSOR, engine.topRight   .x, engine.topRight   .y, engine.topRight   ::set),
-							new ImportView.Handle("Bottom-Left" +" Corner", Cursor.MOVE_CURSOR, engine.bottomLeft .x, engine.bottomLeft .y, engine.bottomLeft ::set),
-							new ImportView.Handle("Bottom-Right"+" Corner", Cursor.MOVE_CURSOR, engine.bottomRight.x, engine.bottomRight.y, engine.bottomRight::set)
-					}
-			);
+			engine = new CutOutEngine(ImageImportDialog.this, originalImage);
+			defineRangeEditor = new DefineRange();
+			resizeResultEditor = new ResizeResult();
+			currentEditor = defineRangeEditor;
+			toolbar = null;
 		}
-	
-		@Override
-		void mouseMoved(MouseEvent e)
+		
+		private class DialogBottomToolbar extends JPanel
 		{
-			super.mouseMoved(e);
-			if (DEBUG_TEST_ENGINE)
-				computeAndShowTestValues(e);
-		}
-	
-		private void computeAndShowTestValues(MouseEvent e)
-		{
-			if (viewState.isOk() && engine.debug_gc!=null)
+			private static final long serialVersionUID = 5935836598863163297L;
+			private final JComboBox<Integer> cmbbxHitPointCount;
+			private final JToggleButton btnDefineRange;
+			private final JToggleButton btnResizeResult;
+			private final JButton btnSetSize;
+			private final JButton btnOk;
+			private final JButton btnCancel;
+
+			DialogBottomToolbar()
 			{
-				java.awt.Point mouse = e.getPoint();
-				Point p = viewState.convertPos_ScreenToAngle(mouse);
+				super(new GridBagLayout());
+				GridBagConstraints c = new GridBagConstraints();
+				c.fill = GridBagConstraints.BOTH;
 				
-				double dist2Top    = Tools.callChecked("dist2Top"   , 0.0, () -> engine.debug_gc.   topLine.computeDist(p) );
-				double dist2Left   = Tools.callChecked("dist2Left"  , 0.0, () -> engine.debug_gc.  leftLine.computeDist(p) );
-				double dist2Right  = Tools.callChecked("dist2Right" , 0.0, () -> engine.debug_gc. rightLine.computeDist(p) );
-				double dist2Bottom = Tools.callChecked("dist2Bottom", 0.0, () -> engine.debug_gc.bottomLine.computeDist(p) );
+				cmbbxHitPointCount = new JComboBox<>(new Integer[] {3,4,5,6,7,8,9,10});
+				cmbbxHitPointCount.setRenderer(new Tables.NonStringRenderer<>(obj -> {
+					if (obj instanceof Integer n)
+						return "%d x %d (%d)".formatted(n,n,n*n);
+					return obj==null ? "----" : obj.toString();
+				}, 70));
 				
-				Engine.PixelCoord targetPixel = Tools.callChecked("computeTargetPixel", null, () -> engine.debug_gc.computeTargetPixel(p.x, p.y));
+				engine.SUBRASTER_SIZE = MyHomeLibrary.appSettings.getInt(MyHomeLibrary.AppSettings.ValueKey.ImageImportDialog_CutOutEngine_SubRasterSize, engine.SUBRASTER_SIZE);
+				cmbbxHitPointCount.setSelectedItem(engine.SUBRASTER_SIZE);
 				
-				boolean isInside = Tools.callChecked("isInside", false, () -> engine.debug_gc.isInside(p.x, p.y) );
+				cmbbxHitPointCount.addActionListener(e -> {
+					Integer size = cmbbxHitPointCount.getItemAt(cmbbxHitPointCount.getSelectedIndex());
+					if (size == null) return;
+					engine.SUBRASTER_SIZE = size;
+					MyHomeLibrary.appSettings.putInt(MyHomeLibrary.AppSettings.ValueKey.ImageImportDialog_CutOutEngine_SubRasterSize, engine.SUBRASTER_SIZE);
+					if (currentEditor==resizeResultEditor)
+						SwingUtilities.invokeLater(() -> {
+							resizeResultEditor.updateImage();
+							importView.reset();
+						});
+				});
 				
-				int x = (int) Math.floor( p.x );
-				int y = (int) Math.floor( p.y );
-				boolean isCandidate = Tools.callChecked("isCandidate", false, () -> engine.debug_gc.isCandidate(x, y) );
+				btnOk = Tools.createButton("Ok", currentEditor==resizeResultEditor, null, e -> {
+					if (currentEditor!=resizeResultEditor) return;
+					result = resizeResultEditor.resultImage;
+					closeDialog();
+				});
+				btnCancel = Tools.createButton("Cancel Cut Out", true, null, e -> closeDialog());
 				
-				System.out.printf(Locale.ENGLISH, "Engine-Test:"
-						+ " mouse:%10s -> source:%15s"
-						+ " -> {"
-						+ " targetPixel:%10s, isInside:%5s, isCandidate:%5s,"
-						+ " top:%8.2f,"
-						+ " left:%8.2f,"
-						+ " right:%8.2f,"
-						+ " bottom:%8.2f"
-						+ " } %n",
-						toString(mouse), toString(p),
-						toString(targetPixel), isInside, isCandidate,
-						dist2Top,
-						dist2Left,
-						dist2Right,
-						dist2Bottom
+				ButtonGroup bg = new ButtonGroup();
+				btnDefineRange = Tools.createToggleButton("Define Range" , true, currentEditor == defineRangeEditor, bg, null, b -> {
+					setEditor(currentEditor = b ? defineRangeEditor : resizeResultEditor);
+					updateBtns();
+				});
+				btnResizeResult = Tools.createToggleButton("Resize Result", true, currentEditor == resizeResultEditor, bg, null, b -> {
+					setEditor(currentEditor = b ? resizeResultEditor : defineRangeEditor);
+					updateBtns();
+				});
+				
+				btnSetSize = Tools.createButton("Set Size", true, null, e -> reduceSize());
+				
+				add(new JLabel("Measurement Points per Pixel:  "), c);
+				add(cmbbxHitPointCount, c);
+				add(btnDefineRange, c);
+				add(btnResizeResult, c);
+				add(btnSetSize, c);
+				c.weightx = 1;
+				add(new JLabel(), c);
+				c.weightx = 0;
+				add(btnOk, c);
+				add(btnCancel, c);
+				
+				updateBtns();
+			}
+
+			private void updateBtns()
+			{
+				int imageWidth  = engine.targetWidth;
+				int imageHeight = engine.targetHeight;
+				double f = Math.max(imageWidth, imageHeight) / Tools.IMAGE_REDUCTION__MAX_SIZE;
+				int reducedWidth  = (int) Math.round( imageWidth  / f );
+				int reducedHeight = (int) Math.round( imageHeight / f );
+				
+				btnSetSize.setText(
+						currentEditor!=resizeResultEditor || f <= Tools.IMAGE_REDUCTION__THRESHOLD
+							? "Set Size"
+							: "Set Size to %d x %d".formatted(reducedWidth, reducedHeight)
+				);
+				
+				btnOk     .setEnabled(currentEditor==resizeResultEditor);
+				btnSetSize.setEnabled(currentEditor==resizeResultEditor && f > Tools.IMAGE_REDUCTION__THRESHOLD);
+			}
+
+			private void reduceSize()
+			{
+				if (currentEditor!=resizeResultEditor)
+					return;
+				
+				int imageWidth  = engine.targetWidth ;
+				int imageHeight = engine.targetHeight;
+				double f = Math.max(imageWidth, imageHeight) / Tools.IMAGE_REDUCTION__MAX_SIZE;
+				
+				if (f <= Tools.IMAGE_REDUCTION__THRESHOLD)
+					return;
+				
+				engine.targetWidth  = (int) Math.round( imageWidth  / f );
+				engine.targetHeight = (int) Math.round( imageHeight / f );
+				resizeResultEditor.updateImage();
+				importView.reset();
+				updateBtns();
+			}
+		}
+		
+		@Override
+		JPanel createDialogBottomToolbar()
+		{
+			return toolbar = new DialogBottomToolbar();
+		}
+
+		@Override
+		ImageEditor getInitialEditor()
+		{
+			return currentEditor;
+		}
+		
+		private class DefineRange extends ImageEditor
+		{
+			DefineRange()
+			{
+				super(
+						"Define Range", true,
+						new ImportView.Handle[] {
+								new ImportView.Handle("Top-Left"    +" Corner", Cursor.MOVE_CURSOR, engine.topLeft    .x, engine.topLeft    .y, engine.topLeft    ::set),
+								new ImportView.Handle("Top-Right"   +" Corner", Cursor.MOVE_CURSOR, engine.topRight   .x, engine.topRight   .y, engine.topRight   ::set),
+								new ImportView.Handle("Bottom-Left" +" Corner", Cursor.MOVE_CURSOR, engine.bottomLeft .x, engine.bottomLeft .y, engine.bottomLeft ::set),
+								new ImportView.Handle("Bottom-Right"+" Corner", Cursor.MOVE_CURSOR, engine.bottomRight.x, engine.bottomRight.y, engine.bottomRight::set)
+						}
 				);
 			}
-		}
-	
-		private Object toString(Engine.PixelCoord p) // max length: 10
-		{
-			if (p==null)
-				return "<null>";
-			return "%dx%d".formatted(p.x,p.y);
-		}
-	
-		private String toString(Point p) // max length: 15 
-		{
-			if (p==null)
-				return "<null>";
-			return String.format(Locale.ENGLISH, "%1.2fx%1.2f", p.x, p.y);
-		}
-	
-		private String toString(java.awt.Point p) // max length: 10
-		{
-			if (p==null)
-				return "<null>";
-			return "%dx%d".formatted(p.x,p.y);
-		}
-	
-		@Override
-		void mouseReleased(MouseEvent e)
-		{
-			if (dragDelta != null)
-				engine.computeTargetSize();
-			super.mouseReleased(e);
-		}
-	
-		@Override
-		protected void drawLines(Graphics2D g2, int x, int y, int width, int height)
-		{
-			if (isInside || dragDelta!=null)
+			
+			@Override
+			BufferedImage getImage()
 			{
-				Stroke prevStroke = g2.getStroke();
-				
-				g2.setColor(Color.BLACK);
-				g2.setXORMode(Color.WHITE);
-				
-				Point topLeft     = viewState.convertPos_AngleToScreen(engine.topLeft    );
-				Point topRight    = viewState.convertPos_AngleToScreen(engine.topRight   );
-				Point bottomLeft  = viewState.convertPos_AngleToScreen(engine.bottomLeft );
-				Point bottomRight = viewState.convertPos_AngleToScreen(engine.bottomRight);
-				
-				Point top1 = Point.between(1/3.0, topLeft, topRight);
-				Point top2 = Point.between(2/3.0, topLeft, topRight);
-				Point left1 = Point.between(1/3.0, topLeft, bottomLeft);
-				Point left2 = Point.between(2/3.0, topLeft, bottomLeft);
-				Point right1 = Point.between(1/3.0, topRight, bottomRight);
-				Point right2 = Point.between(2/3.0, topRight, bottomRight);
-				Point bottom1 = Point.between(1/3.0, bottomLeft, bottomRight);
-				Point bottom2 = Point.between(2/3.0, bottomLeft, bottomRight);
-				
-				ImportView.drawLine(g2,    topLeft,    topRight);
-				ImportView.drawLine(g2, bottomLeft, bottomRight);
-				ImportView.drawLine(g2,    topLeft,  bottomLeft);
-				ImportView.drawLine(g2,   topRight, bottomRight);
-				
-				g2.setStroke(STROKE_DASHED_LINE);
-				ImportView.drawLine(g2, top1, bottom1);
-				ImportView.drawLine(g2, top2, bottom2);
-				ImportView.drawLine(g2, left1, right1);
-				ImportView.drawLine(g2, left2, right2);
-				
-				g2.setPaintMode();
-				g2.setStroke(prevStroke);
+				return engine.image;
+			}
+
+			@Override
+			void mouseMoved(MouseEvent e)
+			{
+				super.mouseMoved(e);
+				if (DEBUG_TEST_ENGINE)
+					computeAndShowTestValues(e);
+			}
+		
+			private void computeAndShowTestValues(MouseEvent e)
+			{
+				if (viewState.isOk() && engine.debug_gc!=null)
+				{
+					java.awt.Point mouse = e.getPoint();
+					Point p = viewState.convertPos_ScreenToAngle(mouse);
+					
+					double dist2Top    = Tools.callChecked("dist2Top"   , 0.0, () -> engine.debug_gc.   topLine.computeDist(p) );
+					double dist2Left   = Tools.callChecked("dist2Left"  , 0.0, () -> engine.debug_gc.  leftLine.computeDist(p) );
+					double dist2Right  = Tools.callChecked("dist2Right" , 0.0, () -> engine.debug_gc. rightLine.computeDist(p) );
+					double dist2Bottom = Tools.callChecked("dist2Bottom", 0.0, () -> engine.debug_gc.bottomLine.computeDist(p) );
+					
+					CutOutEngine.PixelCoord targetPixel = Tools.callChecked("computeTargetPixel", null, () -> engine.debug_gc.computeTargetPixel(p.x, p.y));
+					
+					boolean isInside = Tools.callChecked("isInside", false, () -> engine.debug_gc.isInside(p.x, p.y) );
+					
+					int x = (int) Math.floor( p.x );
+					int y = (int) Math.floor( p.y );
+					boolean isCandidate = Tools.callChecked("isCandidate", false, () -> engine.debug_gc.isCandidate(x, y) );
+					
+					System.out.printf(Locale.ENGLISH, "Engine-Test:"
+							+ " mouse:%10s -> source:%15s"
+							+ " -> {"
+							+ " targetPixel:%10s, isInside:%5s, isCandidate:%5s,"
+							+ " top:%8.2f,"
+							+ " left:%8.2f,"
+							+ " right:%8.2f,"
+							+ " bottom:%8.2f"
+							+ " } %n",
+							toString(mouse), toString(p),
+							toString(targetPixel), isInside, isCandidate,
+							dist2Top,
+							dist2Left,
+							dist2Right,
+							dist2Bottom
+					);
+				}
+			}
+		
+			private Object toString(CutOutEngine.PixelCoord p) // max length: 10
+			{
+				if (p==null)
+					return "<null>";
+				return "%dx%d".formatted(p.x,p.y);
+			}
+		
+			private String toString(Point p) // max length: 15 
+			{
+				if (p==null)
+					return "<null>";
+				return String.format(Locale.ENGLISH, "%1.2fx%1.2f", p.x, p.y);
+			}
+		
+			private String toString(java.awt.Point p) // max length: 10
+			{
+				if (p==null)
+					return "<null>";
+				return "%dx%d".formatted(p.x,p.y);
+			}
+		
+			@Override
+			void mouseReleased(MouseEvent e)
+			{
+				if (dragDelta != null)
+					engine.computeTargetSize();
+				super.mouseReleased(e);
+			}
+		
+			@Override
+			protected void drawLines(Graphics2D g2, int x, int y, int width, int height)
+			{
+				if (isInside || dragDelta!=null)
+				{
+					Stroke prevStroke = g2.getStroke();
+					
+					g2.setColor(Color.BLACK);
+					g2.setXORMode(Color.WHITE);
+					
+					Point topLeft     = viewState.convertPos_AngleToScreen(engine.topLeft    );
+					Point topRight    = viewState.convertPos_AngleToScreen(engine.topRight   );
+					Point bottomLeft  = viewState.convertPos_AngleToScreen(engine.bottomLeft );
+					Point bottomRight = viewState.convertPos_AngleToScreen(engine.bottomRight);
+					
+					Point top1 = Point.between(1/3.0, topLeft, topRight);
+					Point top2 = Point.between(2/3.0, topLeft, topRight);
+					Point left1 = Point.between(1/3.0, topLeft, bottomLeft);
+					Point left2 = Point.between(2/3.0, topLeft, bottomLeft);
+					Point right1 = Point.between(1/3.0, topRight, bottomRight);
+					Point right2 = Point.between(2/3.0, topRight, bottomRight);
+					Point bottom1 = Point.between(1/3.0, bottomLeft, bottomRight);
+					Point bottom2 = Point.between(2/3.0, bottomLeft, bottomRight);
+					
+					ImportView.drawLine(g2,    topLeft,    topRight);
+					ImportView.drawLine(g2, bottomLeft, bottomRight);
+					ImportView.drawLine(g2,    topLeft,  bottomLeft);
+					ImportView.drawLine(g2,   topRight, bottomRight);
+					
+					g2.setStroke(STROKE_DASHED_LINE);
+					ImportView.drawLine(g2, top1, bottom1);
+					ImportView.drawLine(g2, top2, bottom2);
+					ImportView.drawLine(g2, left1, right1);
+					ImportView.drawLine(g2, left2, right2);
+					
+					g2.setPaintMode();
+					g2.setStroke(prevStroke);
+				}
 			}
 		}
-	}
 
-	private class ResizeResult extends Step
-	{
-		private BufferedImage resultImage;
-		private boolean isComputing;
-	
-		ResizeResult()
+		private class ResizeResult extends ImageEditor
 		{
-			super("Resize Result", true, new Handles(engine).toArray());
-			resultImage = null;
-			isComputing = false;
-		}
+			private BufferedImage resultImage;
+			private boolean isComputing;
 		
-		@Override
-		protected String getExtraTitleStr()
-		{
-			if (isComputing)
-				return "computing image %d x %d ...".formatted(engine.targetWidth, engine.targetHeight);
-			return "%d x %d".formatted(engine.targetWidth, engine.targetHeight);
-		}
-
-		@Override
-		void activate()
-		{
-			updateImage();
-		}
-	
-		@Override
-		BufferedImage getImage()
-		{
-			return resultImage;
-		}
+			ResizeResult()
+			{
+				super("Resize Result", true, new Handles(engine).toArray());
+				resultImage = null;
+				isComputing = false;
+			}
+			
+			@Override
+			protected String getExtraTitleStr()
+			{
+				if (isComputing)
+					return "computing image %d x %d ...".formatted(engine.targetWidth, engine.targetHeight);
+				return "%d x %d".formatted(engine.targetWidth, engine.targetHeight);
+			}
 		
-		@Override
-		void mouseDragged(MouseEvent e)
-		{
-			super.mouseDragged(e);
-			updateWindowTitle();
-		}
-
-		@Override
-		void mouseReleased(MouseEvent e)
-		{
-			if (dragDelta != null)
+			@Override
+			void activate()
+			{
 				updateImage();
-			super.mouseReleased(e);
+			}
+		
+			@Override
+			BufferedImage getImage()
+			{
+				return resultImage;
+			}
+			
+			@Override
+			void mouseDragged(MouseEvent e)
+			{
+				super.mouseDragged(e);
+				updateWindowTitle();
+				if (toolbar!=null)
+					toolbar.updateBtns();
+			}
+		
+			@Override
+			void mouseReleased(MouseEvent e)
+			{
+				if (dragDelta != null)
+				{
+					updateImage();
+					importView.reset();
+					if (toolbar!=null)
+						toolbar.updateBtns();
+				}
+				super.mouseReleased(e);
+			}
+		
+			private void updateImage()
+			{
+				isComputing = true; updateWindowTitle();
+				resultImage = engine.computeImage();
+				isComputing = false; updateWindowTitle();
+				Handles.resetHandles(engine, handles);
+			}
+		
+			@Override
+			protected void drawLines(Graphics2D g2, int x, int y, int width, int height)
+			{
+				if (isInside || dragDelta!=null)
+				{
+					Stroke prevStroke = g2.getStroke();
+					
+					g2.setColor(Color.BLACK);
+					g2.setXORMode(Color.WHITE);
+					
+					int x1 = viewState.convertPos_AngleToScreen_LongX(0);
+					int y1 = viewState.convertPos_AngleToScreen_LatY (0);
+					int x2 = viewState.convertPos_AngleToScreen_LongX(engine.targetWidth );
+					int y2 = viewState.convertPos_AngleToScreen_LatY (engine.targetHeight);
+					
+					g2.drawLine(x1,y1,x2,y1);
+					g2.drawLine(x1,y2,x2,y2);
+					g2.drawLine(x1,y1,x1,y2);
+					g2.drawLine(x2,y1,x2,y2);
+					
+					g2.setStroke(STROKE_DASHED_LINE);
+					g2.drawLine(x1,y1,x2,y2);
+					g2.drawLine(x1,y2,x2,y1);
+					
+					g2.setPaintMode();
+					g2.setStroke(prevStroke);
+				}
+			}
+		
+			private static class Handles
+			{
+				private final SpecHandle handleHeight;
+				private final SpecHandle handleWidth;
+				private final SpecHandle handleBoth;
+				private final CutOutEngine engine;
+			
+				Handles(CutOutEngine engine)
+				{
+					this.engine = engine;
+					handleWidth  = new SpecHandle("Width"         , Cursor. E_RESIZE_CURSOR, p -> p.set( engine.targetWidth    , engine.targetHeight/2.0 ), this::changeWidth );
+					handleHeight = new SpecHandle("Height"        , Cursor. S_RESIZE_CURSOR, p -> p.set( engine.targetWidth/2.0, engine.targetHeight     ), this::changeHeight);
+					handleBoth   = new SpecHandle("Width & Height", Cursor.SE_RESIZE_CURSOR, p -> p.set( engine.targetWidth    , engine.targetHeight     ), this::changeBoth  );
+				}
+				
+				private static class SpecHandle extends ImportView.Handle
+				{
+					private final Consumer<Point> resetPos;
+		
+					SpecHandle(String title, int cursor, Consumer<Point> resetPos, Consumer<Point> setValue)
+					{
+						super(title, cursor, 0, 0, setValue);
+						this.resetPos = resetPos;
+						resetPos();
+					}
+		
+					void resetPos()
+					{
+						resetPos.accept(pos);
+					}
+				}
+			
+				ImportView.Handle[] toArray()
+				{
+					return new ImportView.Handle[] {
+							handleWidth,
+							handleHeight,
+							handleBoth
+					};
+				}
+				
+				static void resetHandles(CutOutEngine engine, ImportView.Handle[] handles)
+				{
+					if (handles==null) return;
+					for (ImportView.Handle handle : handles)
+						if (handle instanceof SpecHandle specHandle)
+							specHandle.resetPos();
+				}
+			
+				private void changeBoth(Point p)
+				{
+					engine.targetWidth  = (int) Math.round( p.x );
+					engine.targetHeight = (int) Math.round( p.y );
+					handleWidth .resetPos();
+					handleHeight.resetPos();
+					handleBoth  .resetPos();
+				}
+			
+				private void changeWidth(Point p)
+				{
+					engine.targetWidth = (int) Math.round( p.x );
+					handleWidth .resetPos();
+					handleHeight.resetPos();
+					handleBoth  .resetPos();
+				}
+			
+				private void changeHeight(Point p)
+				{
+					engine.targetHeight = (int) Math.round( p.y );
+					handleWidth .resetPos();
+					handleHeight.resetPos();
+					handleBoth  .resetPos();
+				}
+			}
 		}
+	} 
 
-		private void updateImage()
-		{
-			isComputing = true; updateWindowTitle();
-			resultImage = engine.computeImage();
-			isComputing = false; updateWindowTitle();
-			Handles.resetHandles(engine, handles);
-		}
-	
-		@Override
-		protected void drawLines(Graphics2D g2, int x, int y, int width, int height)
-		{
-			if (isInside || dragDelta!=null)
-			{
-				Stroke prevStroke = g2.getStroke();
-				
-				g2.setColor(Color.BLACK);
-				g2.setXORMode(Color.WHITE);
-				
-				int x1 = viewState.convertPos_AngleToScreen_LongX(0);
-				int y1 = viewState.convertPos_AngleToScreen_LatY (0);
-				int x2 = viewState.convertPos_AngleToScreen_LongX(engine.targetWidth );
-				int y2 = viewState.convertPos_AngleToScreen_LatY (engine.targetHeight);
-				
-				g2.drawLine(x1,y1,x2,y1);
-				g2.drawLine(x1,y2,x2,y2);
-				g2.drawLine(x1,y1,x1,y2);
-				g2.drawLine(x2,y1,x2,y2);
-				
-				g2.setStroke(STROKE_DASHED_LINE);
-				g2.drawLine(x1,y1,x2,y2);
-				g2.drawLine(x1,y2,x2,y1);
-				
-				g2.setPaintMode();
-				g2.setStroke(prevStroke);
-			}
-		}
-	
-		private static class Handles
-		{
-			private final SpecHandle handleHeight;
-			private final SpecHandle handleWidth;
-			private final SpecHandle handleBoth;
-			private final Engine engine;
-		
-			Handles(Engine engine)
-			{
-				this.engine = engine;
-				handleWidth  = new SpecHandle("Width"         , Cursor. E_RESIZE_CURSOR, p -> p.set( engine.targetWidth    , engine.targetHeight/2.0 ), this::changeWidth );
-				handleHeight = new SpecHandle("Height"        , Cursor. S_RESIZE_CURSOR, p -> p.set( engine.targetWidth/2.0, engine.targetHeight     ), this::changeHeight);
-				handleBoth   = new SpecHandle("Width & Height", Cursor.SE_RESIZE_CURSOR, p -> p.set( engine.targetWidth    , engine.targetHeight     ), this::changeBoth  );
-			}
-			
-			private static class SpecHandle extends ImportView.Handle
-			{
-				private final Consumer<Point> resetPos;
-	
-				SpecHandle(String title, int cursor, Consumer<Point> resetPos, Consumer<Point> setValue)
-				{
-					super(title, cursor, 0, 0, setValue);
-					this.resetPos = resetPos;
-					resetPos();
-				}
-	
-				void resetPos()
-				{
-					resetPos.accept(pos);
-				}
-			}
-		
-			ImportView.Handle[] toArray()
-			{
-				return new ImportView.Handle[] {
-						handleWidth,
-						handleHeight,
-						handleBoth
-				};
-			}
-			
-			static void resetHandles(Engine engine, ImportView.Handle[] handles)
-			{
-				if (handles==null) return;
-				for (ImportView.Handle handle : handles)
-					if (handle instanceof SpecHandle specHandle)
-						specHandle.resetPos();
-			}
-		
-			private void changeBoth(Point p)
-			{
-				engine.targetWidth  = (int) Math.round( p.x );
-				engine.targetHeight = (int) Math.round( p.y );
-				handleWidth .resetPos();
-				handleHeight.resetPos();
-				handleBoth  .resetPos();
-			}
-		
-			private void changeWidth(Point p)
-			{
-				engine.targetWidth = (int) Math.round( p.x );
-				handleWidth .resetPos();
-				handleHeight.resetPos();
-				handleBoth  .resetPos();
-			}
-		
-			private void changeHeight(Point p)
-			{
-				engine.targetHeight = (int) Math.round( p.y );
-				handleWidth .resetPos();
-				handleHeight.resetPos();
-				handleBoth  .resetPos();
-			}
-		}
-	}
-	
 	@SuppressWarnings("unused")
 	private static class ImportView extends ZoomableCanvas<ImportView.ViewState>
 	{
@@ -949,14 +1230,13 @@ public class ImageImportDialog extends StandardDialog
 		private static final long serialVersionUID = 8848334775743934506L;
 		private static final Color COLOR_AXIS = new Color(0x70000000,true);
 		
-		private Step step;
+		private ImageEditor editor;
 
 		ImportView()
 		{
-			this.step = null;
+			this.editor = null;
 			activateMapScale(COLOR_AXIS, "px", true);
 			activateAxes(COLOR_AXIS, true,true,true,true);
-			setPreferredSize(600, 600);
 		}
 		
 		ViewState getViewState()
@@ -964,12 +1244,12 @@ public class ImageImportDialog extends StandardDialog
 			return viewState;
 		}
 
-		@Override public void mousePressed (MouseEvent e) { super.mousePressed (e); if (step!=null) step.mousePressed (e); }
-		@Override public void mouseDragged (MouseEvent e) { super.mouseDragged (e); if (step!=null) step.mouseDragged (e); }
-		@Override public void mouseReleased(MouseEvent e) { super.mouseReleased(e); if (step!=null) step.mouseReleased(e); }
-		@Override public void mouseEntered (MouseEvent e) { super.mouseEntered (e); if (step!=null) step.mouseEntered (e); }
-		@Override public void mouseMoved   (MouseEvent e) { super.mouseMoved   (e); if (step!=null) step.mouseMoved   (e); }
-		@Override public void mouseExited  (MouseEvent e) { super.mouseExited  (e); if (step!=null) step.mouseExited  (e); }
+		@Override public void mousePressed (MouseEvent e) { super.mousePressed (e); if (editor!=null) editor.mousePressed (e); }
+		@Override public void mouseDragged (MouseEvent e) { super.mouseDragged (e); if (editor!=null) editor.mouseDragged (e); }
+		@Override public void mouseReleased(MouseEvent e) { super.mouseReleased(e); if (editor!=null) editor.mouseReleased(e); }
+		@Override public void mouseEntered (MouseEvent e) { super.mouseEntered (e); if (editor!=null) editor.mouseEntered (e); }
+		@Override public void mouseMoved   (MouseEvent e) { super.mouseMoved   (e); if (editor!=null) editor.mouseMoved   (e); }
+		@Override public void mouseExited  (MouseEvent e) { super.mouseExited  (e); if (editor!=null) editor.mouseExited  (e); }
 
 		static void drawLine(Graphics2D g2, Point p1, Point p2)
 		{
@@ -1019,11 +1299,11 @@ public class ImageImportDialog extends StandardDialog
 			g2.fillRect((int)Math.round(x), (int)Math.round(y), (int)Math.round(width), (int)Math.round(height));
 		}
 
-		void setStep(Step step)
+		void setEditor(ImageEditor editor)
 		{
-			this.step = step;
+			this.editor = editor;
 			reset();
-			if (this.step!=null && this.step.isEditor)
+			if (this.editor!=null && this.editor.needsViewInEditorMode)
 				activateEditorMode();
 			else
 				activateViewerMode();
@@ -1040,9 +1320,9 @@ public class ImageImportDialog extends StandardDialog
 				g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 				g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_LCD_HRGB);
 				
-				if (step!=null)
+				if (editor!=null)
 				{
-					BufferedImage image = step.getImage();
+					BufferedImage image = editor.getImage();
 					if (image!=null)
 					{
 						int imageX      = viewState.convertPos_AngleToScreen_LongX(0);
@@ -1052,7 +1332,7 @@ public class ImageImportDialog extends StandardDialog
 						g2.drawImage(image, imageX, imageY, imageWidth, imageHeight, null);
 					}
 					
-					step.drawExtras(g2, x, y, width, height);
+					editor.drawExtras(g2, x, y, width, height);
 				}
 				
 				drawMapDecoration(g2, x, y, width, height);
@@ -1095,7 +1375,7 @@ public class ImageImportDialog extends StandardDialog
 
 			@Override
 			protected void determineMinMax(MapLatLong min, MapLatLong max) {
-				BufferedImage image = step==null ? null : step.getImage();
+				BufferedImage image = editor==null ? null : editor.getImage();
 				min.longitude_x = 0.0;
 				min.latitude_y  = 0.0;
 				max.longitude_x = image==null ? 100.0 : image.getWidth ();

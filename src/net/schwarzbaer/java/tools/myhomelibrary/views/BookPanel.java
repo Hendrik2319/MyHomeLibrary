@@ -6,17 +6,21 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Window;
 import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.Vector;
 import java.util.function.BiConsumer;
 
+import javax.imageio.ImageIO;
 import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
+import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JMenu;
@@ -39,7 +43,6 @@ import net.schwarzbaer.java.tools.myhomelibrary.data.Author;
 import net.schwarzbaer.java.tools.myhomelibrary.data.Book;
 import net.schwarzbaer.java.tools.myhomelibrary.data.Book.Field;
 import net.schwarzbaer.java.tools.myhomelibrary.data.BookSeries;
-import net.schwarzbaer.java.tools.myhomelibrary.data.Notifier;
 import net.schwarzbaer.java.tools.myhomelibrary.data.Publisher;
 
 class BookPanel extends JPanel
@@ -137,7 +140,7 @@ class BookPanel extends JPanel
 		labPublisher   = new JLabel("Publisher"  +":  ");
 		labCatalogID   = new JLabel("Catalog ID" +":  ");
 		
-		coverImagesPanel = new CoverImagesPanel(this.main.notifier);
+		coverImagesPanel = new CoverImagesPanel(main);
 		
 		c.weightx = 0;
 		c.weighty = 0;
@@ -320,24 +323,24 @@ class BookPanel extends JPanel
 	{
 		private static final long serialVersionUID = -7178751322272176418L;
 		
-		private final Notifier notifier;
+		private final MyHomeLibrary main;
 		private final SmallImageView imgvwBack;
 		private final SmallImageView imgvwSpine;
 		private final SmallImageView imgvwFront;
 		private Book currentBook;
 
-		CoverImagesPanel(Notifier notifier)
+		CoverImagesPanel(MyHomeLibrary main)
 		{
 			super(new GridBagLayout());
-			this.notifier = notifier;
+			this.main = main;
 			currentBook = null;
 			
 			GridBagConstraints c = new GridBagConstraints();
 			c.fill = GridBagConstraints.BOTH;
 			
-			imgvwBack  = new SmallImageView(200, 300, "Back Cover" , "back" , createFileInBookSetter((b,filename) -> b.backCover  = filename, Field.BackCover , null));
-			imgvwSpine = new SmallImageView(100, 300, "Book Spine" , "spine", createFileInBookSetter((b,filename) -> b.spineCover = filename, Field.SpineCover, null));
-			imgvwFront = new SmallImageView(200, 300, "Front Cover", "front", createFileInBookSetter((b,filename) -> b.frontCover = filename, Field.FrontCover, this::updateFrontCoverThumb));
+			imgvwBack  = new SmallImageView(this.main, 200, 300, "Back Cover" , "back" , createFileInBookSetter((b,filename) -> b.backCover  = filename, Field.BackCover , null));
+			imgvwSpine = new SmallImageView(this.main, 100, 300, "Book Spine" , "spine", createFileInBookSetter((b,filename) -> b.spineCover = filename, Field.SpineCover, null));
+			imgvwFront = new SmallImageView(this.main, 200, 300, "Front Cover", "front", createFileInBookSetter((b,filename) -> b.frontCover = filename, Field.FrontCover, this::updateFrontCoverThumb));
 			
 			c.weighty = 1; 
 			c.gridx = 0; c.weightx = 2; add(imgvwBack, c);
@@ -350,7 +353,7 @@ class BookPanel extends JPanel
 			if (book==null) return;
 			book.updateFrontCoverThumb(image);
 			
-			notifier.books.fieldChanged(this, book, Field.FrontCoverThumb);
+			main.notifier.books.fieldChanged(this, book, Field.FrontCoverThumb);
 		}
 
 		private SmallImageView.FileInBookSetter createFileInBookSetter(BiConsumer<Book,String> setValue, Field field, BiConsumer<Book,BufferedImage> processImage)
@@ -361,7 +364,7 @@ class BookPanel extends JPanel
 						setValue.accept(b, filename);
 						if (processImage!=null)
 							processImage.accept(b,image);
-						notifier.books.fieldChanged(this, b, field);
+						main.notifier.books.fieldChanged(this, b, field);
 					}
 			);
 		}
@@ -396,9 +399,9 @@ class BookPanel extends JPanel
 			void setFileInBook(String filename, BufferedImage image);
 		}
 		
-		SmallImageView(int width, int height, String title, String coverPartStr, FileInBookSetter setFileInBook)
+		SmallImageView(MyHomeLibrary main, int width, int height, String title, String coverPartStr, FileInBookSetter setFileInBook)
 		{
-			super(null, width, height, null, true, (iv, wPIL, isG) -> new ModifiedImageViewContextMenu(iv, wPIL, isG, coverPartStr));
+			super(null, width, height, null, true, (iv, wPIL, isG) -> new ModifiedImageViewContextMenu(main, iv, wPIL, isG, coverPartStr));
 			this.setFileInBook = Objects.requireNonNull( setFileInBook );
 			
 			setBorder(BorderFactory.createTitledBorder(title));
@@ -433,6 +436,7 @@ class BookPanel extends JPanel
 		private static class ModifiedImageViewContextMenu extends ImageViewContextMenu
 		{
 			private static final long serialVersionUID = 1369192488640827455L;
+			private final MyHomeLibrary main;
 			private final String coverPartStr;
 			private ImageFileSetter setImgFile;
 			private JMenu menuPrevImages;
@@ -443,9 +447,10 @@ class BookPanel extends JPanel
 				void setImgFile(String filename, BufferedImage image, boolean loadImage);
 			}
 			
-			protected ModifiedImageViewContextMenu(ImageView imageView, boolean withPredefinedInterpolationLevel, boolean isGrouped, String coverPartStr)
+			protected ModifiedImageViewContextMenu(MyHomeLibrary main, ImageView imageView, boolean withPredefinedInterpolationLevel, boolean isGrouped, String coverPartStr)
 			{
 				super(imageView, withPredefinedInterpolationLevel, isGrouped);
+				this.main = main;
 				this.coverPartStr = Objects.requireNonNull( coverPartStr );
 				this.setImgFile = null;
 				bookId = null;
@@ -465,11 +470,51 @@ class BookPanel extends JPanel
 			@Override
 			protected void addElementsAtFirst()
 			{
-				add(Tools.createMenuItem("Paste new image", true, null, e -> {
+				add(Tools.createMenuItem("Paste new image from clipboard", true, null, e -> {
 					pasteImage();
+				}));
+				add(Tools.createMenuItem("Load new image from file ...", true, null, e -> {
+					loadImage();
 				}));
 				
 				add(menuPrevImages = new JMenu("Select one of prev. images"));
+			}
+
+			private void loadImage()
+			{
+				if (JFileChooser.APPROVE_OPTION != main.imageImportFileChooser.showOpenDialog(main.mainWindow))
+					return;
+				
+				File file = main.imageImportFileChooser.getSelectedFile();
+				BufferedImage image;
+				try { image = ImageIO.read(file); }
+				catch (IOException ex)
+				{
+					//ex.printStackTrace();
+					System.err.printf("IOException while reading image \"%s\": %s%n", file.getAbsolutePath(), ex.getMessage());
+					String title = "IOException while reading image";
+					String msg = "IOException while reading image:%n"
+							+ "   Image file:\"%s\"%n"
+							+ "   Error: %s".formatted(
+									file.getAbsolutePath(),
+									ex.getMessage()
+							);
+					JOptionPane.showMessageDialog(main.mainWindow, msg, title, JOptionPane.ERROR_MESSAGE);
+					return;
+				}
+				if (image==null)
+				{
+					String title = "File isn't an image";
+					String msg = "Given file \"%s\"%n isn't an image with a known format.".formatted(file.getAbsolutePath());
+					JOptionPane.showMessageDialog(main.mainWindow, msg, title, JOptionPane.ERROR_MESSAGE);
+					return;
+				}
+				
+				image = ImageImportDialog.showDialog(main.mainWindow, image);
+				if (image==null)
+					return;
+				
+				writeImage(image);
 			}
 
 			private void pasteImage()
@@ -479,15 +524,24 @@ class BookPanel extends JPanel
 				{
 					String title = "No image in clipboard";
 					String msg = "Sorry, no image data found in clipboard.";
-					JOptionPane.showMessageDialog(this, msg, title, JOptionPane.INFORMATION_MESSAGE);
+					JOptionPane.showMessageDialog(main.mainWindow, msg, title, JOptionPane.INFORMATION_MESSAGE);
 					return;
 				}
 				
+				image = ImageImportDialog.showDialog(main.mainWindow, image);
+				if (image==null)
+					return;
+				
+				writeImage(image);
+			}
+
+			private void writeImage(BufferedImage image)
+			{
 				int imageWidth  = image.getWidth();
 				int imageHeight = image.getHeight();
-				if (imageHeight > 1000)
+				double f = Math.max(imageWidth, imageHeight) / Tools.IMAGE_REDUCTION__MAX_SIZE;
+				if (f>Tools.IMAGE_REDUCTION__THRESHOLD)
 				{
-					double f = imageHeight/1000.0;
 					int reducedWidth  = (int) Math.round( imageWidth  / f );
 					int reducedHeight = (int) Math.round( imageHeight / f );
 					

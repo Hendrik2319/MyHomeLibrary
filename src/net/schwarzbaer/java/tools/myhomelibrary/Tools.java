@@ -20,6 +20,7 @@ import javax.swing.JButton;
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JMenuItem;
 import javax.swing.JTextField;
+import javax.swing.JToggleButton;
 import javax.swing.SwingUtilities;
 
 import net.schwarzbaer.java.lib.gui.GeneralIcons;
@@ -27,9 +28,17 @@ import net.schwarzbaer.java.lib.gui.ProgressDialog;
 
 public class Tools
 {
+	public static final double IMAGE_REDUCTION__THRESHOLD = 1.3;
+	public static final double IMAGE_REDUCTION__MAX_SIZE = 1000.0;
+	
 	public static JButton createButton(String text, boolean isEnabled, GeneralIcons.IconGroup icons, ActionListener al)
 	{
 		return configureAbstractButton(new JButton(text), isEnabled, null, icons, al);
+	}
+
+	public static JToggleButton createToggleButton(String text, boolean isEnabled, boolean checked, ButtonGroup bg, GeneralIcons.IconGroup icons, Consumer<Boolean> setValue)
+	{
+		return configureCheckBox(new JToggleButton(text, checked), isEnabled, bg, icons, setValue);
 	}
 
 	public static JMenuItem createMenuItem(String text, boolean isEnabled, GeneralIcons.IconGroup icons, ActionListener al)

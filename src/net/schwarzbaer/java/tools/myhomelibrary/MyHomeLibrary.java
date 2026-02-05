@@ -1,7 +1,11 @@
 package net.schwarzbaer.java.tools.myhomelibrary;
 
+import java.io.File;
+
+import javax.swing.JFileChooser;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
+import javax.swing.filechooser.FileNameExtensionFilter;
 
 import net.schwarzbaer.java.lib.system.Settings;
 import net.schwarzbaer.java.tools.myhomelibrary.data.BookStorage;
@@ -22,12 +26,19 @@ public class MyHomeLibrary
 	public final MainWindow mainWindow;
 	public final BookStorage bookStorage;
 	public final Notifier notifier;
+	public final JFileChooser imageImportFileChooser;
 
 	private MyHomeLibrary()
 	{
 		notifier = new Notifier();
 		bookStorage = new BookStorage(this);
 		mainWindow = new MainWindow(this);
+		
+		imageImportFileChooser = new JFileChooser();
+		imageImportFileChooser.setMultiSelectionEnabled(false);
+		imageImportFileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+		imageImportFileChooser.setFileFilter(new FileNameExtensionFilter("JPEG-Image (*.jpg, *.jpeg)", "jpg", "jpeg"));
+		imageImportFileChooser.addChoosableFileFilter(new FileNameExtensionFilter("PNG-Image (*.png)", "png"));
 	}
 
 	private void initialize()
@@ -35,13 +46,14 @@ public class MyHomeLibrary
 		bookStorage.readFromFile();
 		notifier.storages.bookStorageLoaded(this);
 		//ImageImportDialog.test(mainWindow);
+		imageImportFileChooser.setCurrentDirectory(new File(".").getAbsoluteFile());
 	}
 	
 	public static class AppSettings extends Settings.DefaultAppSettings<AppSettings.ValueGroup, AppSettings.ValueKey>
 	{
 		public enum ValueKey
 		{
-			SplitPane_BooksTab,
+			SplitPane_BooksTab, ImageImportDialog_CutOutEngine_SubRasterSize,
 		}
 		
 		private enum ValueGroup implements Settings.GroupKeys<ValueKey> {
