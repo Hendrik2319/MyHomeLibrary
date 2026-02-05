@@ -19,6 +19,8 @@ import javax.imageio.plugins.jpeg.JPEGImageWriteParam;
 import javax.imageio.stream.ImageOutputStream;
 import javax.swing.JOptionPane;
 
+import net.schwarzbaer.java.tools.myhomelibrary.data.Book;
+
 public class FileIO
 {
 	private static final String dataFolderName = "data";
@@ -69,9 +71,14 @@ public class FileIO
 		return new File( getImageFolder(), filename );
 	}
 
-	public static String saveImageFile(String bookId, String coverPartStr, BufferedImage image) throws FileIOException
+	private static String generateBaseFileName(String bookId, Book.CoverPart coverPart)
 	{
-		String basefilename = "%s_%s".formatted(bookId,coverPartStr);
+		return "%s_%s".formatted(bookId,coverPart.name());
+	}
+
+	public static String saveImageFile(String bookId, Book.CoverPart coverPart, BufferedImage image) throws FileIOException
+	{
+		String basefilename = generateBaseFileName(bookId, coverPart);
 		String extension = ".jpg";
 		File imageFolder = getImageFolder();
 		
@@ -154,9 +161,15 @@ public class FileIO
 		return null;
 	}
 
-	public static String[] getAllImageFiles(String bookId, String coverPartStr) throws FileIOException
+	public static File[] getAllFilesInImageFolder() throws FileIOException
 	{
-		String basefilename = "%s_%s".formatted(bookId,coverPartStr);
+		File imageFolder = getImageFolder();
+		return imageFolder.listFiles(file -> file!=null && file.isFile());
+	}
+
+	public static String[] getAllImageFiles(String bookId, Book.CoverPart coverPart) throws FileIOException
+	{
+		String basefilename = generateBaseFileName(bookId, coverPart);
 		String extension = ".jpg";
 		
 		File imageFolder = getImageFolder();

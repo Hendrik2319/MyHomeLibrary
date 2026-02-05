@@ -45,15 +45,17 @@ public class MyHomeLibrary
 	{
 		bookStorage.readFromFile();
 		notifier.storages.bookStorageLoaded(this);
-		//ImageImportDialog.test(mainWindow);
 		imageImportFileChooser.setCurrentDirectory(new File(".").getAbsoluteFile());
+		mainWindow.initialize();
 	}
 	
 	public static class AppSettings extends Settings.DefaultAppSettings<AppSettings.ValueGroup, AppSettings.ValueKey>
 	{
 		public enum ValueKey
 		{
-			SplitPane_BooksTab, ImageImportDialog_CutOutEngine_SubRasterSize,
+			SplitPane_BooksTab,
+			SplitPane_ImagesTab,
+			ImageImportDialog_CutOutEngine_SubRasterSize,
 		}
 		
 		private enum ValueGroup implements Settings.GroupKeys<ValueKey> {

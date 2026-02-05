@@ -338,9 +338,9 @@ class BookPanel extends JPanel
 			GridBagConstraints c = new GridBagConstraints();
 			c.fill = GridBagConstraints.BOTH;
 			
-			imgvwBack  = new SmallImageView(this.main, 200, 300, "Back Cover" , "back" , createFileInBookSetter((b,filename) -> b.backCover  = filename, Field.BackCover , null));
-			imgvwSpine = new SmallImageView(this.main, 100, 300, "Book Spine" , "spine", createFileInBookSetter((b,filename) -> b.spineCover = filename, Field.SpineCover, null));
-			imgvwFront = new SmallImageView(this.main, 200, 300, "Front Cover", "front", createFileInBookSetter((b,filename) -> b.frontCover = filename, Field.FrontCover, this::updateFrontCoverThumb));
+			imgvwBack  = new SmallImageView(this.main, 200, 300, "Back Cover" , Book.CoverPart.back , createFileInBookSetter((b,filename) -> b.backCover  = filename, Field.BackCover , null));
+			imgvwSpine = new SmallImageView(this.main, 100, 300, "Book Spine" , Book.CoverPart.spine, createFileInBookSetter((b,filename) -> b.spineCover = filename, Field.SpineCover, null));
+			imgvwFront = new SmallImageView(this.main, 200, 300, "Front Cover", Book.CoverPart.front, createFileInBookSetter((b,filename) -> b.frontCover = filename, Field.FrontCover, this::updateFrontCoverThumb));
 			
 			c.weighty = 1; 
 			c.gridx = 0; c.weightx = 2; add(imgvwBack, c);
@@ -399,9 +399,9 @@ class BookPanel extends JPanel
 			void setFileInBook(String filename, BufferedImage image);
 		}
 		
-		SmallImageView(MyHomeLibrary main, int width, int height, String title, String coverPartStr, FileInBookSetter setFileInBook)
+		SmallImageView(MyHomeLibrary main, int width, int height, String title, Book.CoverPart coverPart, FileInBookSetter setFileInBook)
 		{
-			super(null, width, height, null, true, (iv, wPIL, isG) -> new ModifiedImageViewContextMenu(main, iv, wPIL, isG, coverPartStr));
+			super(null, width, height, null, true, (iv, wPIL, isG) -> new ModifiedImageViewContextMenu(main, iv, wPIL, isG, coverPart));
 			this.setFileInBook = Objects.requireNonNull( setFileInBook );
 			
 			setBorder(BorderFactory.createTitledBorder(title));
@@ -437,7 +437,7 @@ class BookPanel extends JPanel
 		{
 			private static final long serialVersionUID = 1369192488640827455L;
 			private final MyHomeLibrary main;
-			private final String coverPartStr;
+			private final Book.CoverPart coverPart;
 			private ImageFileSetter setImgFile;
 			private JMenu menuPrevImages;
 			private String bookId;
@@ -447,11 +447,11 @@ class BookPanel extends JPanel
 				void setImgFile(String filename, BufferedImage image, boolean loadImage);
 			}
 			
-			protected ModifiedImageViewContextMenu(MyHomeLibrary main, ImageView imageView, boolean withPredefinedInterpolationLevel, boolean isGrouped, String coverPartStr)
+			protected ModifiedImageViewContextMenu(MyHomeLibrary main, ImageView imageView, boolean withPredefinedInterpolationLevel, boolean isGrouped, Book.CoverPart coverPart)
 			{
 				super(imageView, withPredefinedInterpolationLevel, isGrouped);
 				this.main = main;
-				this.coverPartStr = Objects.requireNonNull( coverPartStr );
+				this.coverPart = Objects.requireNonNull( coverPart );
 				this.setImgFile = null;
 				bookId = null;
 			}
@@ -562,7 +562,7 @@ class BookPanel extends JPanel
 				String filename;
 				try
 				{
-					filename = FileIO.saveImageFile(bookId,coverPartStr,image);
+					filename = FileIO.saveImageFile(bookId,coverPart,image);
 				}
 				catch (FileIOException ex)
 				{
@@ -570,7 +570,7 @@ class BookPanel extends JPanel
 					ex.showMessageDialog(
 							this,
 							"Can't write image file",
-							"Can't write image file ( bookID: \"%s\", cover part: \"%s\" ).".formatted(bookId,coverPartStr)
+							"Can't write image file ( bookID: \"%s\", cover part: %s ).".formatted(bookId,coverPart)
 					);
 					return;
 				}
@@ -586,11 +586,11 @@ class BookPanel extends JPanel
 			private void updatePrevImageMenu(String currentFilename)
 			{
 				String[] filenames;
-				try { filenames = FileIO.getAllImageFiles(bookId,coverPartStr); }
+				try { filenames = FileIO.getAllImageFiles(bookId,coverPart); }
 				catch (FileIOException ex)
 				{
 					// ex.printStackTrace();
-					ex.showInErrorConsole("Can't get list of existing images (%s_%s*.jpg):".formatted(bookId,coverPartStr));
+					ex.showInErrorConsole("Can't get list of existing images (%s_%s*.jpg):".formatted(bookId,coverPart));
 					filenames = new String[0];
 				}
 				menuPrevImages.removeAll();

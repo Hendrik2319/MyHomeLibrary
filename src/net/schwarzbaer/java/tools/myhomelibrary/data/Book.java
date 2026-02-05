@@ -18,6 +18,10 @@ public class Book implements UniqueID.IdBased<Book>
 		Title, Authors, Publisher, CatalogID, BookSeries, Release, FrontCover, BackCover, SpineCover, FrontCoverThumb
 	}
 	
+	public enum CoverPart {
+		back, spine, front
+	}
+	
 	public final String id;
 	public final boolean recentlyCreated;
 	public String title = null;

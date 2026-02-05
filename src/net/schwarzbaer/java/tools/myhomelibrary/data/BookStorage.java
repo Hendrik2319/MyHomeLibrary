@@ -25,10 +25,12 @@ import net.schwarzbaer.java.tools.myhomelibrary.data.UniqueID.UniqueIDException;
 
 public class BookStorage
 {
+	public  static final int LENGTH_BOOK_ID       = 7;
+	public  static final int LENGTH_BOOKSERIES_ID = 4;
 	private static final String HEADER_BOOK = "[Book]";
 	private static final String HEADER_BOOK_SERIES = "[BookSeries]";
-	private static final UniqueID bookIDs = new UniqueID(7);
-	private static final UniqueID bookSeriesIDs = new UniqueID(4);
+	private static final UniqueID bookIDs       = new UniqueID(LENGTH_BOOK_ID      );
+	private static final UniqueID bookSeriesIDs = new UniqueID(LENGTH_BOOKSERIES_ID);
 	
 	private final MyHomeLibrary main;
 	private final Map<String,Book> books;
