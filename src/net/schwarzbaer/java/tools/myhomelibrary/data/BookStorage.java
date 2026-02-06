@@ -10,7 +10,6 @@ import java.io.PrintWriter;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -116,16 +115,8 @@ public class BookStorage
 				.values()
 				.stream()
 				.filter(filter==null ? v->true : filter)
-				.sorted( getCompByName(getName) )
+				.sorted( Tools.createComparatorByName(getName) )
 				.toList();
-	}
-
-	private <V> Comparator<V> getCompByName(Function<V, String> getName)
-	{
-		return Comparator.<V,String>comparing(
-				getName,
-				Comparator.<String,String>comparing(String::toLowerCase).thenComparing(Comparator.naturalOrder())
-		);
 	}
 
 	public void assign(Book book, BookSeries bookSeries)

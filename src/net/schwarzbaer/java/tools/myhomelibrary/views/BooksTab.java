@@ -1,6 +1,8 @@
 package net.schwarzbaer.java.tools.myhomelibrary.views;
 
 import java.awt.BorderLayout;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -29,6 +31,7 @@ import net.schwarzbaer.java.tools.myhomelibrary.data.Publisher;
 class BooksTab extends JSplitPane
 {
 	private static final long serialVersionUID = 4723650064707625510L;
+	private static final Comparator<Book> COMPARATOR__BY_NAME = Tools.createComparatorByName(b -> Tools.getIfNotNull(b.title, "<unnamed>"));
 	
 	private final MyHomeLibrary main;
 	private final BooksTable table;
@@ -38,13 +41,15 @@ class BooksTab extends JSplitPane
 	
 	private ListType currentListType;
 	private Selector currentSelector;
+	private RowOrder currentRowOrder;
 
 	BooksTab(MyHomeLibrary main)
 	{
 		super(JSplitPane.HORIZONTAL_SPLIT, true);
 		this.main = main;
-		currentListType = null;
+		currentListType = ListType.AllBooks;
 		currentSelector = null;
+		currentRowOrder = RowOrder.Name;
 		
 		table = new BooksTable();
 		table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
@@ -98,11 +103,13 @@ class BooksTab extends JSplitPane
 
 	private void updateTableContent()
 	{
-		table.tableModel.setData(
-				currentSelector==null
-					? null
-					: currentSelector.getBooks.get()
-		);
+		List<Book> list = currentSelector==null ? null : currentSelector.getBooks.get();
+		if (currentRowOrder!=null && currentRowOrder.comparator!=null && list!=null)
+		{
+			list = new ArrayList<>(list);
+			list.sort(currentRowOrder.comparator);
+		}
+		table.tableModel.setData( list );
 	}
 
 	private enum ListType
@@ -153,6 +160,27 @@ class BooksTab extends JSplitPane
 				bookStorage.assign(newBook, bs);
 		}
 	}
+	
+	private enum RowOrder
+	{
+		Original ("Original Order", null),
+		Name     ("Order by Name",
+				COMPARATOR__BY_NAME
+		),
+		CatalogID("Order by Catalog ID", Comparator
+				.<Book,String>comparing(b -> b.catalogID, Comparator.nullsLast(Comparator.naturalOrder()))
+				.thenComparing(COMPARATOR__BY_NAME)
+		),
+		Release  ("Order by Release", Comparator
+				.<Book,String>comparing(b -> b.release, Comparator.nullsLast(Comparator.naturalOrder()))
+				.thenComparing(COMPARATOR__BY_NAME)
+		),
+		;
+		private final String label;
+		private final Comparator<Book> comparator;
+		RowOrder(String label, Comparator<Book> comparator) { this.label = label; this.comparator = comparator; }
+		@Override public String toString() { return label; }
+	}
 
 	private class UpperToolBar extends JToolBar
 	{
@@ -160,6 +188,7 @@ class BooksTab extends JSplitPane
 		
 		private final Selector.Factory selectorFactory;
 		private final JComboBox<ListType> cmbbxListType;
+		private final JComboBox<RowOrder> cmbbxRowOrder;
 		private final JComboBox<Object> cmbbxSelector;
 		private final DefaultComboBoxModel<Object> cmbbxSelectorModel;
 		private final JLabel labSelector;
@@ -173,7 +202,7 @@ class BooksTab extends JSplitPane
 			
 			cmbbxListType = new JComboBox<>(ListType.values());
 			cmbbxListType.setMaximumSize(cmbbxListType.getPreferredSize());
-			cmbbxListType.setSelectedItem(ListType.AllBooks);
+			cmbbxListType.setSelectedItem(currentListType);
 			cmbbxListType.addActionListener(e -> listTypeChanged());
 			
 			labSelector = new JLabel();
@@ -182,9 +211,22 @@ class BooksTab extends JSplitPane
 			cmbbxSelector = new JComboBox<>(cmbbxSelectorModel);
 			cmbbxSelector.addActionListener(e -> selectorChanged());
 			
+			cmbbxRowOrder = new JComboBox<>(RowOrder.values());
+			cmbbxRowOrder.setMaximumSize(cmbbxRowOrder.getPreferredSize());
+			cmbbxRowOrder.setSelectedItem(currentRowOrder);
+			cmbbxRowOrder.addActionListener(e -> rowOrderChanged());
+			
 			add(cmbbxListType);
 			add(labSelector);
 			add(cmbbxSelector);
+			add(cmbbxRowOrder);
+		}
+
+		private void rowOrderChanged()
+		{
+			currentRowOrder = cmbbxRowOrder.getItemAt(cmbbxRowOrder.getSelectedIndex());
+			updateTableContent();
+			lowerToolBar.updateElements();
 		}
 
 		private void selectorChanged()
@@ -268,6 +310,7 @@ class BooksTab extends JSplitPane
 		private static final long serialVersionUID = -8128704594216506559L;
 		private final JButton btnAdd;
 		private final JButton btnRemove;
+		private final JButton btnResetRowOrder;
 
 		LowerToolBar()
 		{
@@ -301,12 +344,20 @@ class BooksTab extends JSplitPane
 				if (row.bookSeries!=null)
 					main.notifier.bookSeries.fieldChanged(this, row.bookSeries, BookSeries.Field.Books);
 			}));
+			
+			addSeparator();
+			
+			add(btnResetRowOrder = Tools.createButton("Reset Row Order", true, GrayCommandIcons.IconGroup.Reload, e -> {
+				table.tableRowSorter.resetSortOrder();
+				table.repaint();
+			}));
 		}
 
 		public void updateElements()
 		{
-			btnAdd   .setEnabled(currentSelector!=null);
-			btnRemove.setEnabled(currentSelector!=null && table.getSelectedRowCount() > 0);
+			btnAdd          .setEnabled(currentSelector!=null);
+			btnRemove       .setEnabled(currentSelector!=null && table.getSelectedRowCount() > 0);
+			btnResetRowOrder.setEnabled(currentSelector!=null);
 		}
 	}
 }

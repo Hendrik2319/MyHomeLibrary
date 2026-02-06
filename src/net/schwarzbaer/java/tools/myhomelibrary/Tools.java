@@ -5,6 +5,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -30,6 +31,7 @@ public class Tools
 {
 	public static final double IMAGE_REDUCTION__THRESHOLD = 1.3;
 	public static final double IMAGE_REDUCTION__MAX_SIZE = 1000.0;
+	public static final Comparator<String> COMPARATOR__IGNORING_CASE = Comparator.<String,String>comparing(String::toLowerCase).thenComparing(Comparator.naturalOrder());
 	
 	public static JButton createButton(String text, boolean isEnabled, GeneralIcons.IconGroup icons, ActionListener al)
 	{
@@ -63,6 +65,11 @@ public class Tools
 		if (icons!=null) icons.setIcons(comp);
 		if (bg!=null) bg.add(comp);
 		return comp;
+	}
+
+	public static <V> Comparator<V> createComparatorByName(Function<V, String> getName)
+	{
+		return Comparator.<V,String>comparing( getName, COMPARATOR__IGNORING_CASE );
 	}
 	
 	public static String toOrdinalString(int n)

@@ -122,7 +122,7 @@ public class ImageImportDialog extends StandardDialog
 
 	public static BufferedImage showDialog(Window window, BufferedImage image)
 	{
-		return showDialog(window, image, Scenario.Type.FullImageManipulation, 800,800);
+		return showDialog(window, image, Scenario.Type.FullImageManipulation, 900,800);
 	}
 
 	private static BufferedImage showDialog(Window window, BufferedImage image, Scenario.Type scenario, int width, int height)
@@ -1224,11 +1224,11 @@ public class ImageImportDialog extends StandardDialog
 	@SuppressWarnings("unused")
 	private static class ImportView extends ZoomableCanvas<ImportView.ViewState>
 	{
+		private static final long serialVersionUID = 8848334775743934506L;
 		private static final Color TOOLTIP_TEXT   = Color.BLACK;
 		private static final Color TOOLTIP_FILL   = new Color(0xFFFFE1);
 		private static final Color TOOLTIP_BORDER = new Color(0x646464);
-		private static final long serialVersionUID = 8848334775743934506L;
-		private static final Color COLOR_AXIS = new Color(0x70000000,true);
+		private static final Color COLOR_AXIS     = new Color(0x70000000,true);
 		
 		private ImageEditor editor;
 

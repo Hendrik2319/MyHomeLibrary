@@ -49,7 +49,7 @@ class ImagesTableContextMenu extends Tables.TableContextMenu<ImageData, ImagesTa
 
 	private void deleteSelectedRows()
 	{
-		if (table.selectedRows.isEmpty())
+		if (table.selectedRows==null || table.selectedRows.isEmpty())
 			return;
 		
 		table.checkUsage(table.selectedRows);
@@ -108,9 +108,9 @@ class ImagesTableContextMenu extends Tables.TableContextMenu<ImageData, ImagesTa
 	@Override
 	protected void updateElementsBeforeInvokationOfContextMenu()
 	{
-		miDeleteRows.setEnabled(!table.selectedRows.isEmpty());
+		miDeleteRows.setEnabled(table.selectedRows!=null && !table.selectedRows.isEmpty());
 		miDeleteRows.setText(
-				table.selectedRows.isEmpty()
+				table.selectedRows==null || table.selectedRows.isEmpty()
 					? "Delete Rows"
 					: table.selectedRows.size() == 1
 						? "Delete 1 Row"

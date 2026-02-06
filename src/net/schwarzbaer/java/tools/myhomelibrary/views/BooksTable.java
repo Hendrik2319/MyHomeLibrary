@@ -17,8 +17,7 @@ public class BooksTable extends JTable
 {
 	private static final long serialVersionUID = -4421855766356160275L;
 	        final BooksTableModel tableModel;
-	@SuppressWarnings("unused")
-	private final SimplifiedRowSorter tableRowSorter;
+	        final SimplifiedRowSorter tableRowSorter;
 	private final BooksTableCellRenderer tableCellRenderer;
 	        final JScrollPane tableScrollPane;
 
