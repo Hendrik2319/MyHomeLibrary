@@ -46,7 +46,35 @@ public class BookStorage
 		authors    = new HashMap<>();
 		publishers = new HashMap<>();
 	}
+
+	public void checkUsage(List<ImageData> list, Runnable updateWhenChanged)
+	{
+		for (ImageData imgData : list)
+		{
+			Book oldValue = imgData.book;
+			imgData.book = null;
+			if (imgData.nameParts!=null)
+			{
+				String filename = imgData.file.getName();
+				Book book = books.get(imgData.nameParts.bookID());
+				if (book!=null)
+					switch (imgData.nameParts.coverPart())
+					{
+					case back : if (filename.equals( book.backCover  )) imgData.book = book; break;
+					case front: if (filename.equals( book.frontCover )) imgData.book = book; break;
+					case spine: if (filename.equals( book.spineCover )) imgData.book = book; break;
+					}
+			}
+			if (imgData.book!=oldValue && updateWhenChanged!=null)
+				updateWhenChanged.run();
+		}
+	}
 	
+	public boolean hasBook(String bookID)
+	{
+		return books.containsKey(bookID);
+	}
+
 	public List<Book> getListOfBooks()
 	{
 		return getList(books, b -> Tools.getIfNotNull(b.title, "<unnamed>"));

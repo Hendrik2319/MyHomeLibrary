@@ -20,6 +20,7 @@ import javax.imageio.stream.ImageOutputStream;
 import javax.swing.JOptionPane;
 
 import net.schwarzbaer.java.tools.myhomelibrary.data.Book;
+import net.schwarzbaer.java.tools.myhomelibrary.data.BookStorage;
 
 public class FileIO
 {
@@ -71,21 +72,16 @@ public class FileIO
 		return new File( getImageFolder(), filename );
 	}
 
-	private static String generateBaseFileName(String bookId, Book.CoverPart coverPart)
-	{
-		return "%s_%s".formatted(bookId,coverPart.name());
-	}
-
 	public static String saveImageFile(String bookId, Book.CoverPart coverPart, BufferedImage image) throws FileIOException
 	{
-		String basefilename = generateBaseFileName(bookId, coverPart);
+		String basefilename = NameParts.generateBaseFileName(bookId, coverPart);
 		String extension = ".jpg";
 		File imageFolder = getImageFolder();
 		
 		int index = 0;
 		File file = new File(imageFolder, basefilename+extension);
 		while (file.exists())
-			file = new File(imageFolder, "%s_%03d%s".formatted(basefilename, ++index, extension));
+			file = new File(imageFolder, NameParts.generateFileName(basefilename, ++index, extension));
 		
 		saveImageFile(file, image);
 		
@@ -169,14 +165,14 @@ public class FileIO
 
 	public static String[] getAllImageFiles(String bookId, Book.CoverPart coverPart) throws FileIOException
 	{
-		String basefilename = generateBaseFileName(bookId, coverPart);
+		String basefilename = NameParts.generateBaseFileName(bookId, coverPart);
 		String extension = ".jpg";
 		
 		File imageFolder = getImageFolder();
 		File[] files = imageFolder.listFiles(file -> {
 			if (file==null || !file.isFile()) return false;
 			String filename = file.getName();
-			return filename.startsWith(basefilename) && filename.endsWith(extension);
+			return NameParts.isNameScheme(filename, basefilename, extension);
 		});
 		
 		return Arrays
@@ -229,6 +225,51 @@ public class FileIO
 			}
 		}
 		return dataFolder;
+	}
+	
+	public record NameParts(String bookID, Book.CoverPart coverPart, String extra, String extension)
+	{
+		public static NameParts parse(String filename)
+		{
+			// VZQIQQH_front_008.jpg
+			// VZQIQQH_back.jpg
+			
+			if (filename.length() < BookStorage.LENGTH_BOOK_ID+1) return null;
+			if (filename.charAt(BookStorage.LENGTH_BOOK_ID)!='_') return null;
+			String bookID = filename.substring(0, BookStorage.LENGTH_BOOK_ID);
+			
+			String str = filename.substring(BookStorage.LENGTH_BOOK_ID+1);
+			
+			Book.CoverPart coverPart = null;
+			for (Book.CoverPart cp : Book.CoverPart.values())
+				if (str.startsWith(cp.name())) { coverPart = cp; break; }
+			if (coverPart == null) return null;
+			
+			str = str.substring(coverPart.name().length());
+			
+			int pos = str.lastIndexOf('.');
+			if (pos<0) return null;
+			
+			String ext   = str.substring(pos+1);
+			String extra = str.substring(0,pos);
+			
+			return new NameParts(bookID, coverPart, extra, ext);
+		}
+
+		private static String generateBaseFileName(String bookId, Book.CoverPart coverPart)
+		{
+			return "%s_%s".formatted(bookId,coverPart.name());
+		}
+		
+		private static String generateFileName(String basefilename, int index, String extension)
+		{
+			return "%s_%03d%s".formatted(basefilename, index, extension);
+		}
+
+		private static boolean isNameScheme(String filename, String basefilename, String extension)
+		{
+			return filename.startsWith(basefilename) && filename.endsWith(extension);
+		}
 	}
 	
 	public static class FileIOException extends Exception

@@ -1,12 +1,12 @@
 package net.schwarzbaer.java.tools.myhomelibrary.views;
 
+import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 import java.util.Vector;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -18,24 +18,34 @@ import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 
 import net.schwarzbaer.java.lib.gui.Tables;
+import net.schwarzbaer.java.lib.gui.Tables.DataSource;
 import net.schwarzbaer.java.tools.myhomelibrary.FileIO;
 import net.schwarzbaer.java.tools.myhomelibrary.FileIO.FileIOException;
+import net.schwarzbaer.java.tools.myhomelibrary.MyHomeLibrary;
 import net.schwarzbaer.java.tools.myhomelibrary.Tools;
 import net.schwarzbaer.java.tools.myhomelibrary.data.Book;
-import net.schwarzbaer.java.tools.myhomelibrary.data.BookStorage;
+import net.schwarzbaer.java.tools.myhomelibrary.data.ImageData;
 
 class ImagesTable extends JTable
 {
+	private static final Color BGCOLOR_NO_IMAGE          = new Color(0xFFCFFF);
+	private static final Color BGCOLOR_WRONG_NAME_SCHEME = new Color(0xCFCFFF);
+	private static final Color BGCOLOR_UNKNOWN_BOOK      = new Color(0xFFCFCF);
 	private static final long serialVersionUID = 3303408662583526060L;
+	
+	private final MyHomeLibrary main;
 	        final ImagesTableModel tableModel;
-	@SuppressWarnings("unused")
-	private final Tables.SimplifiedRowSorter tableRowSorter;
+	private final Tables.GeneralizedTableCellRenderer2<ImageData, ImagesTableModel.ColumnID, ImagesTableModel> tableCellRenderer;
+	        final Tables.SimplifiedRowSorter tableRowSorter;
 	        final JScrollPane tableScrollPane;
 	private ImagesTableContextMenu tableContextMenu;
+	        List<ImageData> selectedRows;
 
-	ImagesTable()
+	ImagesTable(MyHomeLibrary main)
 	{
+		this.main = main;
 		setModel(tableModel = new ImagesTableModel());
+		selectedRows = null;
 		
 		setRowSorter(tableRowSorter = new Tables.SimplifiedRowSorter(tableModel));
 		setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
@@ -43,13 +53,32 @@ class ImagesTable extends JTable
 		tableModel.setTable(this);
 		tableModel.setColumnWidths(this);
 		
-//		tableCellRenderer = new BooksTableCellRenderer(this);
-//		tableModel.setAllDefaultRenderers(cl -> tableCellRenderer);
+		tableCellRenderer = new Tables.GeneralizedTableCellRenderer2<>(ImagesTableModel.class);
+		tableCellRenderer.setBackgroundColorizer((value, rowM, columnM, columnID, row) -> {
+			if (row!=null && row.size     ==null) return BGCOLOR_NO_IMAGE;
+			if (row!=null && row.nameParts==null) return BGCOLOR_WRONG_NAME_SCHEME;
+			if (columnID==ImagesTableModel.ColumnID.NamePart_bookID && value instanceof String bookID && !this.main.bookStorage.hasBook(bookID))
+				return BGCOLOR_UNKNOWN_BOOK;
+			return null;
+		});
+		tableModel.setAllDefaultRenderers(cl -> tableCellRenderer);
 		
 		tableScrollPane = new JScrollPane(this);
 		tableScrollPane.setPreferredSize(new Dimension(1000,500));
 		
-		tableContextMenu = new ImagesTableContextMenu(this, tableModel, tableScrollPane);
+		tableContextMenu = new ImagesTableContextMenu(this.main, this, tableModel, tableScrollPane);
+	}
+
+	List<ImageData> getSelectedRows_()
+	{
+		return selectedRows = Arrays
+			.stream(getSelectedRows())
+			.filter(rowV -> rowV>=0)
+			.map(this::convertRowIndexToModel)
+			.filter(rowM -> rowM>=0)
+			.mapToObj(tableModel::getRow)
+			.filter(row -> row!=null)
+			.toList();
 	}
 
 	void reloadData()
@@ -70,14 +99,12 @@ class ImagesTable extends JTable
 			return;
 		}
 		
-		List<ImagesTableModel.ImageData> list = Arrays
-			.stream(files)
-			.map(ImagesTableModel.ImageData::new)
-			.toList();
+		List<ImageData> list = ImageData.toList(files);
 		tableModel.setData(new Vector<>(list));
 		
 		new Thread(() -> {
 			completeImageData(list);
+			checkUsage(list);
 			SwingUtilities.invokeLater(()-> {
 				if (tableContextMenu.miReload!=null)
 					tableContextMenu.miReload.setEnabled(true);
@@ -85,9 +112,14 @@ class ImagesTable extends JTable
 		}).start();
 	}
 
-	private void completeImageData(List<ImagesTableModel.ImageData> list)
+	void checkUsage(List<ImageData> list)
 	{
-		for (ImagesTableModel.ImageData imgData : list)
+		main.bookStorage.checkUsage(list, () -> tableModel.fireTableColumnUpdate(ImagesTableModel.ColumnID.Usage));
+	}
+
+	private void completeImageData(List<ImageData> list)
+	{
+		for (ImageData imgData : list)
 		{
 			BufferedImage image;
 			try { image = ImageIO.read(imgData.file); }
@@ -106,7 +138,7 @@ class ImagesTable extends JTable
 		}
 	}
 
-	class ImagesTableModel extends Tables.SimpleGetValueTableModel2<ImagesTableModel, ImagesTableModel.ImageData, ImagesTableModel.ColumnID>
+	class ImagesTableModel extends Tables.SimpleGetValueTableModel2<ImagesTableModel, ImageData, ImagesTableModel.ColumnID>
 	{
 		enum ColumnID implements Tables.SimpleGetValueTableModel2.ColumnIDTypeInt2b<ImagesTableModel,ImageData>, SwingConstants
 		{
@@ -115,10 +147,11 @@ class ImagesTable extends JTable
 			File_Size          ( config("FileSize"  , Long          .class,  60, null  ).setValFunc(d -> Tools.getIfNotNull(d.file, null, File::length )) ),
 			Image_Width        ( config("Width"     , Integer       .class,  45, null  ).setValFunc(d -> Tools.getIfNotNull(d.size, null, s -> s.width )) ),
 			Image_Height       ( config("Height"    , Integer       .class,  45, null  ).setValFunc(d -> Tools.getIfNotNull(d.size, null, s -> s.height)) ),
-			NamePart_bookID    ( config("Book ID"   , String        .class,  65, CENTER).setValFunc(d -> Tools.getIfNotNull(d.nameParts, null, NameParts::bookID   )) ),
-			NamePart_coverPart ( config("Cover Part", Book.CoverPart.class,  70, CENTER).setValFunc(d -> Tools.getIfNotNull(d.nameParts, null, NameParts::coverPart)) ),
-			NamePart_extra     ( config("Extra"     , String        .class,  45, CENTER).setValFunc(d -> Tools.getIfNotNull(d.nameParts, null, NameParts::extra    )) ),
-			NamePart_extension ( config("Ext."      , String        .class,  35, CENTER).setValFunc(d -> Tools.getIfNotNull(d.nameParts, null, NameParts::extension)) ),
+			Usage              ( config("In Use"    , Boolean       .class,  45, null  ).setValFunc(d -> d.book!=null) ),
+			NamePart_bookID    ( config("Book ID"   , String        .class,  65, CENTER).setValFunc(d -> Tools.getIfNotNull(d.nameParts, null, FileIO.NameParts::bookID   )) ),
+			NamePart_coverPart ( config("Cover Part", Book.CoverPart.class,  70, CENTER).setValFunc(d -> Tools.getIfNotNull(d.nameParts, null, FileIO.NameParts::coverPart)) ),
+			NamePart_extra     ( config("Extra"     , String        .class,  45, CENTER).setValFunc(d -> Tools.getIfNotNull(d.nameParts, null, FileIO.NameParts::extra    )) ),
+			NamePart_extension ( config("Ext."      , String        .class,  35, CENTER).setValFunc(d -> Tools.getIfNotNull(d.nameParts, null, FileIO.NameParts::extension)) ),
 			;
 			final Tables.SimplifiedColumnConfig2<ImagesTableModel, ImageData, ?> cfg;
 			ColumnID(Tables.SimplifiedColumnConfig2<ImagesTableModel, ImageData, ?> cfg) { this.cfg = cfg; }
@@ -132,6 +165,8 @@ class ImagesTable extends JTable
 			}
 		}
 		
+		private List<ImageData> data;
+
 		ImagesTableModel()
 		{
 			super(ColumnID.values());
@@ -139,47 +174,20 @@ class ImagesTable extends JTable
 
 		@Override protected ImagesTableModel getThis() { return this; }
 
-		static class ImageData
+		@Override public void setData(ImageData[]           data) { throw new UnsupportedOperationException(); }
+		@Override public void setData(DataSource<ImageData> data) { throw new UnsupportedOperationException(); }
+
+		@Override
+		public void setData(List<ImageData> data)
 		{
-			final File file;
-			final NameParts nameParts;
-			Dimension size = null;
-			
-			ImageData(File file)
-			{
-				this.file = Objects.requireNonNull( file );
-				nameParts = NameParts.parse( this.file.getName() );
-			}
+			this.data = data;
+			super.setData(DataSource.createFrom(data));
 		}
-		
-		record NameParts(String bookID, Book.CoverPart coverPart, String extra, String extension)
+
+		void removeRows(List<ImageData> list)
 		{
-			static NameParts parse(String filename)
-			{
-				// VZQIQQH_front_008.jpg
-				// VZQIQQH_back.jpg
-				
-				if (filename.length() < BookStorage.LENGTH_BOOK_ID+1) return null;
-				if (filename.charAt(BookStorage.LENGTH_BOOK_ID)!='_') return null;
-				String bookID = filename.substring(0, BookStorage.LENGTH_BOOK_ID);
-				
-				String str = filename.substring(BookStorage.LENGTH_BOOK_ID+1);
-				
-				Book.CoverPart coverPart = null;
-				for (Book.CoverPart cp : Book.CoverPart.values())
-					if (str.startsWith(cp.name())) { coverPart = cp; break; }
-				if (coverPart == null) return null;
-				
-				str = str.substring(coverPart.name().length());
-				
-				int pos = str.lastIndexOf('.');
-				if (pos<0) return null;
-				
-				String ext   = str.substring(pos+1);
-				String extra = str.substring(0,pos);
-				
-				return new NameParts(bookID, coverPart, extra, ext);
-			}
+			data.removeAll(list);
+			setData(data);
 		}
 	}
 }
