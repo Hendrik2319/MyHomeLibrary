@@ -202,12 +202,14 @@ public class ImageImportDialog extends StandardDialog
 				for (int i=0; i<row.length; i++)
 					row[i] = new TargetPixel();
 			
+			int imageWidth  = image.getWidth();
+			int imageHeight = image.getHeight();
 			Point minSource = Point.min( topLeft, topRight, bottomLeft, bottomRight );
 			Point maxSource = Point.max( topLeft, topRight, bottomLeft, bottomRight );
-			int minSourceX = (int) Math.floor( minSource.x );
-			int minSourceY = (int) Math.floor( minSource.y );
-			int maxSourceX = (int) Math.floor( maxSource.x );
-			int maxSourceY = (int) Math.floor( maxSource.y );
+			int minSourceX = Math.min( Math.max(0, (int) Math.floor( minSource.x ) ), imageWidth -1);
+			int minSourceY = Math.min( Math.max(0, (int) Math.floor( minSource.y ) ), imageHeight-1);
+			int maxSourceX = Math.min( Math.max(0, (int) Math.floor( maxSource.x ) ), imageWidth -1);
+			int maxSourceY = Math.min( Math.max(0, (int) Math.floor( maxSource.y ) ), imageHeight-1);
 			
 			Tools.setTaskTitle(pd, "Map Source Image to Target Image", 0, 0, maxSourceX-minSourceX);
 			
