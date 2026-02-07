@@ -109,6 +109,7 @@ class BooksTableCellRenderer implements TableCellRenderer
 		private final JLabel fldCatalogID;
 		private final JLabel fldReleaseYear;
 		private final Tables.RendererConfigurator rendConf;
+		private JLabel fldCover;
 		
 		InfoBlock()
 		{
@@ -117,15 +118,25 @@ class BooksTableCellRenderer implements TableCellRenderer
 			c.fill = GridBagConstraints.BOTH;
 			c.weightx = 1;
 			c.weighty = 0;
+			c.gridwidth = 2;
 			c.gridx = 0;
 			c.gridy = -1;
-			c.gridy++; add(fldTitle      = new JLabel(), c);
-			c.gridy++; add(fldAuthors    = new JLabel(), c);
-			c.gridy++; add(fldBookSeries = new JLabel(), c);
+			c.gridy++; add(fldTitle       = new JLabel(), c);
+			c.gridy++; add(fldAuthors     = new JLabel(), c);
+			c.gridy++; add(fldBookSeries  = new JLabel(), c);
 			c.gridy++; add(fldPublisher   = new JLabel(), c);
 			c.gridy++; add(fldCatalogID   = new JLabel(), c);
-			c.gridy++; add(fldReleaseYear = new JLabel(), c);
+			
+			c.gridy++;
+			c.gridwidth = 1;
+			c.gridx = 0; add(fldReleaseYear = new JLabel(), c);
+			c.weightx = 0;
+			c.gridx = 1; add(fldCover       = new JLabel(), c);
+
+			c.weightx = 1;
 			c.weighty = 1;
+			c.gridwidth = 2;
+			c.gridx = 0; 
 			c.gridy++; add(new JLabel(), c);
 			
 			fldTitle.setFont(
@@ -137,12 +148,13 @@ class BooksTableCellRenderer implements TableCellRenderer
 					this::setBorder,
 					this::setOpaque,
 					fgColor -> {
-						fldTitle     .setForeground(fgColor);
-						fldAuthors   .setForeground(fgColor);
-						fldBookSeries.setForeground(fgColor);
+						fldTitle      .setForeground(fgColor);
+						fldAuthors    .setForeground(fgColor);
+						fldBookSeries .setForeground(fgColor);
 						fldPublisher  .setForeground(fgColor);
 						fldCatalogID  .setForeground(fgColor);
 						fldReleaseYear.setForeground(fgColor);
+						fldCover      .setForeground(fgColor);
 					},
 					this::setBackground
 			);
@@ -172,6 +184,15 @@ class BooksTableCellRenderer implements TableCellRenderer
 			fldPublisher  .setText("Publisher: %s" .formatted(book==null || book.publisher==null || book.publisher.name().isBlank() ? "---" : book.publisher.name()    ));
 			fldCatalogID  .setText("Catalog ID: %s".formatted(book==null || book.catalogID==null || book.catalogID.isBlank()        ? "---" : book.catalogID           ));
 			fldReleaseYear.setText("Release: %s"   .formatted(book==null || book.release  ==null || book.release  .isBlank()        ? "---" : book.release             ));
+			fldCover      .setText("Cover: %s"     .formatted(
+					book==null
+						? "---"
+						: "%s%s%s".formatted(
+								book.backCover ==null ? "- " : "B",
+								book.spineCover==null ? "- " : "S",
+								book.frontCover==null ? "- " : "F"
+						)
+			));
 		}
 	}
 }
