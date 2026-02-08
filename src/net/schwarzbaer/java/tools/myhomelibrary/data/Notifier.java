@@ -7,7 +7,7 @@ import java.util.function.Consumer;
 
 public class Notifier
 {
-	private static final boolean DEBUG___SHOW_MESSAGES = true; // TODO: disable debug messages in Notifier
+	private static final boolean DEBUG___SHOW_MESSAGES = false; // T-O-D-O: disable debug messages in Notifier
 	
 	public final BookChangeController       books      = new BookChangeController();
 	public final BookSeriesChangeController bookSeries = new BookSeriesChangeController();

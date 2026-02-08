@@ -18,6 +18,7 @@ import javax.swing.AbstractButton;
 import javax.swing.ButtonGroup;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JMenuItem;
 import javax.swing.JTextField;
@@ -41,6 +42,11 @@ public class Tools
 	public static JToggleButton createToggleButton(String text, boolean isEnabled, boolean checked, ButtonGroup bg, GeneralIcons.IconGroup icons, Consumer<Boolean> setValue)
 	{
 		return configureCheckBox(new JToggleButton(text, checked), isEnabled, bg, icons, setValue);
+	}
+
+	public static JCheckBox createCheckBox(String text, boolean isEnabled, boolean isChecked, ButtonGroup bg, GeneralIcons.IconGroup icons, Consumer<Boolean> setValue)
+	{
+		return configureCheckBox(new JCheckBox(text, isChecked), isEnabled, bg, icons, setValue);
 	}
 
 	public static JMenuItem createMenuItem(String text, boolean isEnabled, GeneralIcons.IconGroup icons, ActionListener al)

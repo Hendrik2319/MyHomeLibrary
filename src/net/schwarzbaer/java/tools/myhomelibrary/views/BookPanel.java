@@ -19,6 +19,7 @@ import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
@@ -60,6 +61,8 @@ class BookPanel extends JPanel
 	private final JButton btnAddAuthor;
 	private final JButton btnEditAuthors;
 	private final JButton btnChangeBSPos;
+	private final JCheckBox chkbxRead;
+	private final JCheckBox chkbxOwned;
 	private final BookSeriesComboBox cmbbxBookSeries;
 	private final PublisherComboBox cmbbxPublisher;
 	private final JLabel labID;
@@ -133,6 +136,17 @@ class BookPanel extends JPanel
 		guiConfigurator.configureOutputField(fldAuthors);
 		guiConfigurator.configureOutputField(fldBookSeriesPos);
 		
+		chkbxRead  = Tools.createCheckBox("Read" , true, false, null, null, b -> {
+			if (currentBook == null || guiConfigurator.ignoreInputEvents) return;
+			currentBook.read = b;
+			this.main.notifier.books.fieldChanged(this, currentBook, Field.Read);
+		});
+		chkbxOwned = Tools.createCheckBox("Owned", true, false, null, null, b -> {
+			if (currentBook == null || guiConfigurator.ignoreInputEvents) return;
+			currentBook.owned = b;
+			this.main.notifier.books.fieldChanged(this, currentBook, Field.Owned);
+		});
+		
 		labTitle       = new JLabel("Title"      +":  ");
 		labAuthors     = new JLabel("Author(s)"  +":  ");
 		labBookSeries  = new JLabel("Book Series"+":  ");
@@ -174,7 +188,9 @@ class BookPanel extends JPanel
 		
 		c.gridy++; c.gridx = -1;
 		c.gridx++; c.weightx = 0; c.gridwidth = 1; add(labCatalogID, c);
-		c.gridx++; c.weightx = 1; c.gridwidth = 3; add(fldCatalogID, c);
+		c.gridx++; c.weightx = 1; c.gridwidth = 1; add(fldCatalogID, c);
+		c.gridx++; c.weightx = 0; c.gridwidth = 1; add(chkbxRead , c);
+		c.gridx++; c.weightx = 0; c.gridwidth = 1; add(chkbxOwned, c);
 		
 		c.gridy++;
 		c.gridx = 0;
@@ -235,6 +251,8 @@ class BookPanel extends JPanel
 		fldCatalogID    .setText(Tools.getIfNotNull(currentBook, "", b -> b.catalogID));
 		cmbbxBookSeries .setSelectedItem(Tools.getIfNotNull(currentBook, null, b -> b.bookSeries));
 		cmbbxPublisher  .setSelectedItem(Tools.getIfNotNull(currentBook, null, b -> b.publisher ));
+		chkbxRead       .setSelected(Tools.getIfNotNull(currentBook, false, b -> b.read ));
+		chkbxOwned      .setSelected(Tools.getIfNotNull(currentBook, false, b -> b.owned));
 		
 		setIgnoreInputEvents(false);
 		

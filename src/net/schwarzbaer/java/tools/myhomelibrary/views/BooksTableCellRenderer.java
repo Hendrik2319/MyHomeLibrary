@@ -102,14 +102,16 @@ class BooksTableCellRenderer implements TableCellRenderer
 	private static class InfoBlock extends JPanel
 	{
 		private static final long serialVersionUID = -3584565062346788798L;
+		private final Tables.RendererConfigurator rendConf;
 		private final JLabel fldTitle;
 		private final JLabel fldAuthors;
 		private final JLabel fldBookSeries;
 		private final JLabel fldPublisher;
 		private final JLabel fldCatalogID;
 		private final JLabel fldReleaseYear;
-		private final Tables.RendererConfigurator rendConf;
-		private JLabel fldCover;
+		private final JLabel fldCover;
+		private final JLabel fldNotRead;
+		private final JLabel fldNotOwned;
 		
 		InfoBlock()
 		{
@@ -124,14 +126,21 @@ class BooksTableCellRenderer implements TableCellRenderer
 			c.gridy++; add(fldTitle       = new JLabel(), c);
 			c.gridy++; add(fldAuthors     = new JLabel(), c);
 			c.gridy++; add(fldBookSeries  = new JLabel(), c);
-			c.gridy++; add(fldPublisher   = new JLabel(), c);
-			c.gridy++; add(fldCatalogID   = new JLabel(), c);
 			
 			c.gridy++;
 			c.gridwidth = 1;
-			c.gridx = 0; add(fldReleaseYear = new JLabel(), c);
-			c.weightx = 0;
-			c.gridx = 1; add(fldCover       = new JLabel(), c);
+			c.weightx = 1; c.gridx = 0; add(fldPublisher   = new JLabel(), c);
+			c.weightx = 0; c.gridx = 1; add(fldNotRead     = new JLabel(), c);
+			
+			c.gridy++;
+			c.gridwidth = 1;
+			c.weightx = 1; c.gridx = 0; add(fldCatalogID   = new JLabel(), c);
+			c.weightx = 0; c.gridx = 1; add(fldNotOwned    = new JLabel(), c);
+			
+			c.gridy++;
+			c.gridwidth = 1;
+			c.weightx = 1; c.gridx = 0; add(fldReleaseYear = new JLabel(), c);
+			c.weightx = 0; c.gridx = 1; add(fldCover       = new JLabel(), c);
 
 			c.weightx = 1;
 			c.weighty = 1;
@@ -155,6 +164,8 @@ class BooksTableCellRenderer implements TableCellRenderer
 						fldCatalogID  .setForeground(fgColor);
 						fldReleaseYear.setForeground(fgColor);
 						fldCover      .setForeground(fgColor);
+						fldNotRead    .setForeground(fgColor);
+						fldNotOwned   .setForeground(fgColor);
 					},
 					this::setBackground
 			);
@@ -168,7 +179,12 @@ class BooksTableCellRenderer implements TableCellRenderer
 					field==Book.Field.BookSeries ||
 					field==Book.Field.Publisher  ||
 					field==Book.Field.CatalogID  ||
-					field==Book.Field.Release;
+					field==Book.Field.Release    ||
+					field==Book.Field.FrontCover ||
+					field==Book.Field.SpineCover ||
+					field==Book.Field.BackCover  ||
+					field==Book.Field.Read       ||
+					field==Book.Field.Owned;
 		}
 
 		public void setData(Book book)
@@ -180,7 +196,10 @@ class BooksTableCellRenderer implements TableCellRenderer
 						? book.bookSeries.name
 						: "<unnamed series>"
 			));
-			fldAuthors    .setText("Author(s): %s" .formatted(book==null || book.authors.isEmpty()                                  ? "---" : book.concatenateAuthors()));
+			fldAuthors    .setText("Author%s: %s"  .formatted(
+					book==null || book.authors.size()<2 ? "" : "s",
+					book==null || book.authors.isEmpty() ? "---" : book.concatenateAuthors()
+			));
 			fldPublisher  .setText("Publisher: %s" .formatted(book==null || book.publisher==null || book.publisher.name().isBlank() ? "---" : book.publisher.name()    ));
 			fldCatalogID  .setText("Catalog ID: %s".formatted(book==null || book.catalogID==null || book.catalogID.isBlank()        ? "---" : book.catalogID           ));
 			fldReleaseYear.setText("Release: %s"   .formatted(book==null || book.release  ==null || book.release  .isBlank()        ? "---" : book.release             ));
@@ -193,6 +212,8 @@ class BooksTableCellRenderer implements TableCellRenderer
 								book.frontCover==null ? "- " : "F"
 						)
 			));
+			fldNotRead .setText(book==null || book.read  ? "" : "Not Read" );
+			fldNotOwned.setText(book==null || book.owned ? "" : "Not Owned");
 		}
 	}
 }

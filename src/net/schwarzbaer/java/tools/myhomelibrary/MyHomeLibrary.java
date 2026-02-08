@@ -7,6 +7,7 @@ import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
+import net.schwarzbaer.java.lib.gui.ProgressDialog;
 import net.schwarzbaer.java.lib.system.Settings;
 import net.schwarzbaer.java.tools.myhomelibrary.data.BookStorage;
 import net.schwarzbaer.java.tools.myhomelibrary.data.Notifier;
@@ -43,10 +44,15 @@ public class MyHomeLibrary
 
 	private void initialize()
 	{
-		bookStorage.readFromFile();
-		notifier.storages.bookStorageLoaded(this);
-		imageImportFileChooser.setCurrentDirectory(new File(".").getAbsoluteFile());
-		mainWindow.initialize();
+		ProgressDialog.runWithProgressDialog(mainWindow, "Initialize", 400, pd -> {
+			bookStorage.readFromFile(pd);
+			
+			Tools.setIndeterminateTaskTitle(pd, "Notify \"Book Storage Loaded\"");
+			notifier.storages.bookStorageLoaded(this);
+			imageImportFileChooser.setCurrentDirectory(new File(".").getAbsoluteFile());
+			
+			mainWindow.initialize(pd);
+		});
 	}
 	
 	public static class AppSettings extends Settings.DefaultAppSettings<AppSettings.ValueGroup, AppSettings.ValueKey>

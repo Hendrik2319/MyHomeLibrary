@@ -85,6 +85,14 @@ public class BooksTable extends JTable
 			return data.get(rowIndex);
 		}
 
+		public int getRowIndex(Book book)
+		{
+			if (data==null)
+				return -1;
+			
+			return data.indexOf(book);
+		}
+
 		@Override
 		public Object getValueAt(int rowIndex, int columnIndex, ColumnID columnID)
 		{

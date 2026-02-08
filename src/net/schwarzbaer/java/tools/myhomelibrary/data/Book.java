@@ -15,7 +15,7 @@ public class Book implements UniqueID.IdBased<Book>
 	public static final int FRONTCOVERTHUMB_MAXHEIGHT = 90;
 	
 	public enum Field {
-		Title, Authors, Publisher, CatalogID, BookSeries, Release, FrontCover, BackCover, SpineCover, FrontCoverThumb
+		Title, Authors, Publisher, CatalogID, BookSeries, Release, FrontCover, BackCover, SpineCover, FrontCoverThumb, Read, Owned
 	}
 	
 	public enum CoverPart {
@@ -34,6 +34,8 @@ public class Book implements UniqueID.IdBased<Book>
 	public String      backCover = null;
 	public String     spineCover = null;
 	public BufferedImage frontCoverThumb = null;
+	public boolean read  = true;
+	public boolean owned = true;
 
 	Book(String id, boolean recentlyCreated)
 	{

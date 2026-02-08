@@ -2,9 +2,11 @@ package net.schwarzbaer.java.tools.myhomelibrary.views;
 
 import javax.swing.JTabbedPane;
 
+import net.schwarzbaer.java.lib.gui.ProgressDialog;
 import net.schwarzbaer.java.lib.gui.StandardMainWindow;
 import net.schwarzbaer.java.lib.system.Settings.DefaultAppSettings.SplitPaneDividersDefinition;
 import net.schwarzbaer.java.tools.myhomelibrary.MyHomeLibrary;
+import net.schwarzbaer.java.tools.myhomelibrary.Tools;
 import net.schwarzbaer.java.tools.myhomelibrary.MyHomeLibrary.AppSettings.ValueKey;
 
 public class MainWindow extends StandardMainWindow
@@ -34,8 +36,9 @@ public class MainWindow extends StandardMainWindow
 		// TODO: add menu bar: clean up (unsused books series, unused images, ...)
 	}
 
-	public void initialize()
+	public void initialize(ProgressDialog pd)
 	{
+		Tools.setIndeterminateTaskTitle(pd, "Collect image data");
 		imagesTab.table.reloadData();
 	}
 }

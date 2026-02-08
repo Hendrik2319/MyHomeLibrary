@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import javax.swing.DefaultComboBoxModel;
@@ -114,10 +115,12 @@ class BooksTab extends JSplitPane
 
 	private enum ListType
 	{
-		AllBooks     ("All Books"),
-		NewBooks     ("Recently Added Books"),
-		BooksOfAuthor("Books of Author"),
-		BooksOfSeries("Books of Series"),
+		AllBooks         ("All Books"),
+		NewBooks         ("Recently Added Books"),
+		BooksOfAuthor    ("Books of Author"),
+		BooksOfSeries    ("Books of Series"),
+		BooksNoAuthor    ("Books with no Author"),
+		BooksNoPublisher ("Books with no Publisher"),
 		;
 		private final String label;
 		ListType(String label) { this.label = label; }
@@ -145,10 +148,10 @@ class BooksTab extends JSplitPane
 			{
 				return new Selector(bookStorage, null, null, () -> bookStorage.getListOfBooks());
 			}
-			
-			Selector createForNew()
+
+			Selector createForPredicate(Predicate<Book> filter)
 			{
-				return new Selector(bookStorage, null, null, () -> bookStorage.getListOfBooks(b -> b.recentlyCreated));
+				return new Selector(bookStorage, null, null, () -> bookStorage.getListOfBooks(filter));
 			}
 		}
 
@@ -240,6 +243,8 @@ class BooksTab extends JSplitPane
 				{
 				case AllBooks:
 				case NewBooks:
+				case BooksNoAuthor:
+				case BooksNoPublisher:
 					break;
 					
 				case BooksOfAuthor:
@@ -276,7 +281,7 @@ class BooksTab extends JSplitPane
 					break;
 					
 				case NewBooks:
-					currentSelector = selectorFactory.createForNew();
+					currentSelector = selectorFactory.createForPredicate(b -> b.recentlyCreated);
 					break;
 					
 				case BooksOfAuthor:
@@ -287,6 +292,14 @@ class BooksTab extends JSplitPane
 				case BooksOfSeries:
 					labSelectorText = "  Book Series: ";
 					selectors = main.bookStorage.getListOfBookSeries();
+					break;
+					
+				case BooksNoAuthor:
+					currentSelector = selectorFactory.createForPredicate(b -> b.authors.isEmpty());
+					break;
+					
+				case BooksNoPublisher:
+					currentSelector = selectorFactory.createForPredicate(b -> b.publisher == null);
 					break;
 				}
 			
@@ -322,6 +335,9 @@ class BooksTab extends JSplitPane
 					currentSelector.initNewBook(newBook);
 				updateTableContent();
 				main.bookStorage.writeToFile();
+				int rowM = table.tableModel.getRowIndex(newBook);
+				int rowV = rowM<0 ? -1 : table.convertRowIndexToView(rowM);
+				if (rowV>=0) table.setRowSelectionInterval(rowV, rowV);
 			}));
 			
 			add(btnRemove = Tools.createButton("Remove Book", true, GrayCommandIcons.IconGroup.Delete, e -> {

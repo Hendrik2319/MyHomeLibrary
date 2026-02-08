@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
+import net.schwarzbaer.java.lib.gui.ProgressDialog;
 import net.schwarzbaer.java.tools.myhomelibrary.FileIO;
 import net.schwarzbaer.java.tools.myhomelibrary.FileIO.FileIOException;
 import net.schwarzbaer.java.tools.myhomelibrary.MyHomeLibrary;
@@ -172,7 +173,7 @@ public class BookStorage
 
 	private enum Field
 	{
-		ID, name, book, title, bookSeries, author, release, publisher, catalogID, frontCover, spineCover, backCover
+		ID, name, book, title, bookSeries, author, release, publisher, catalogID, frontCover, spineCover, backCover, not_read, not_owned
 	}
 	
 	private static String getLineValue(String line, Field field)
@@ -197,8 +198,10 @@ public class BookStorage
 		}
 	}
 
-	public void readFromFile()
+	public void readFromFile(ProgressDialog pd)
 	{
+		Tools.setIndeterminateTaskTitle(pd, "Read BookStorage from file");
+		
 		File file;
 		try { file = FileIO.DataFile.BookStorage.getFile(); }
 		catch (FileIOException ex)
@@ -293,6 +296,8 @@ public class BookStorage
 					if ((valueStr = getLineValue(line, Field.frontCover ))!=null) currentBook.frontCover  = valueStr;
 					if ((valueStr = getLineValue(line, Field.spineCover ))!=null) currentBook.spineCover  = valueStr;
 					if ((valueStr = getLineValue(line, Field.backCover  ))!=null) currentBook.backCover   = valueStr;
+					if (line.equals( Field.not_read .name() )) currentBook.read  = false;
+					if (line.equals( Field.not_owned.name() )) currentBook.owned = false;
 				}
 			}
 			
@@ -348,8 +353,13 @@ public class BookStorage
 				System.err.printf("   caused by %s: %s%n", cause.getClass().getCanonicalName(), cause.getMessage());
 		}
 		
+		Tools.setTaskTitle(pd, "Read FrontCover Thumbs", 0, 0, books.size());
+		int i=0;
 		for (Book book : books.values())
+		{
 			book.updateFrontCoverThumb();
+			Tools.setTaskValue(pd, ++i);
+		}
 	}
 
 	public void writeToFile()
@@ -393,6 +403,8 @@ public class BookStorage
 				if (b.frontCover !=null) out.printf("%s = %s%n", Field.frontCover , b.frontCover   );
 				if (b.spineCover !=null) out.printf("%s = %s%n", Field.spineCover , b.spineCover   );
 				if (b.backCover  !=null) out.printf("%s = %s%n", Field.backCover  , b.backCover    );
+				if (!b.read            ) out.printf("%s%n"     , Field.not_read                    );
+				if (!b.owned           ) out.printf("%s%n"     , Field.not_owned                   );
 				out.println();
 			});
 			
