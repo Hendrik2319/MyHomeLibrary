@@ -161,9 +161,23 @@ public class BookStorage
 		return value;
 	}
 	
+	public BookSeries getBookSeries(String str)
+	{
+		if (str!=null)
+			for (BookSeries bs : bookSeries.values())
+				if (str.equals(bs.name))
+					return bs;
+		return null;
+	}
+
 	public Author getOrCreateAuthor(String name)
 	{
 		return authors.computeIfAbsent(name, Author::new);
+	}
+
+	public Publisher getPublisher(String name)
+	{
+		return publishers.get(name);
 	}
 
 	public Publisher getOrCreatePublisher(String name)

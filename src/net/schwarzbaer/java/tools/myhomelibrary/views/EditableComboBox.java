@@ -46,7 +46,11 @@ abstract class EditableComboBox<V> extends JComboBox<V>
 			setValue( classV.cast(selectedItem) );
 		
 		else if (selectedItem instanceof String selectedStr && !selectedStr.isBlank())
-			updateValues( addNewValueAndSet(selectedStr) );
+		{
+			V value = getExistingValue(selectedStr);
+			if (value==null) value = addNewValueAndSet(selectedStr);
+			updateValues( value );
+		}
 	}
 
 	void updateValues()
@@ -65,5 +69,6 @@ abstract class EditableComboBox<V> extends JComboBox<V>
 	
 	protected abstract List<V> getValues();
 	protected abstract void setValue(V value);
+	protected abstract V getExistingValue(String str);
 	protected abstract V addNewValueAndSet(String str);
 }

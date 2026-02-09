@@ -119,8 +119,7 @@ class BooksTab extends JSplitPane
 		NewBooks         ("Recently Added Books"),
 		BooksOfAuthor    ("Books of Author"),
 		BooksOfSeries    ("Books of Series"),
-		BooksNoAuthor    ("Books with no Author"),
-		BooksNoPublisher ("Books with no Publisher"),
+		IncompleteData   ("Books with incomplete data"),
 		;
 		private final String label;
 		ListType(String label) { this.label = label; }
@@ -243,8 +242,7 @@ class BooksTab extends JSplitPane
 				{
 				case AllBooks:
 				case NewBooks:
-				case BooksNoAuthor:
-				case BooksNoPublisher:
+				case IncompleteData:
 					break;
 					
 				case BooksOfAuthor:
@@ -294,12 +292,8 @@ class BooksTab extends JSplitPane
 					selectors = main.bookStorage.getListOfBookSeries();
 					break;
 					
-				case BooksNoAuthor:
-					currentSelector = selectorFactory.createForPredicate(b -> b.authors.isEmpty());
-					break;
-					
-				case BooksNoPublisher:
-					currentSelector = selectorFactory.createForPredicate(b -> b.publisher == null);
+				case IncompleteData:
+					currentSelector = selectorFactory.createForPredicate( Book::hasIncompleteData );
 					break;
 				}
 			

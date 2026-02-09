@@ -44,6 +44,11 @@ public class Book implements UniqueID.IdBased<Book>
 		authors = new ArrayList<>();
 	}
 
+	public boolean hasIncompleteData()
+	{
+		return authors.isEmpty() || publisher==null || title==null || title.isBlank();
+	}
+
 	public String getTitle()
 	{
 		return title!=null && !title.isBlank()

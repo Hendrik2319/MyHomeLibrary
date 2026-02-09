@@ -179,16 +179,16 @@ class BookPanel extends JPanel
 		c.gridx++; c.weightx = 0; c.gridwidth = 1; add(btnChangeBSPos, c);
 		
 		c.gridy++; c.gridx = -1;
-		c.gridx++; c.weightx = 0; c.gridwidth = 1; add(labReleaseYear, c);
-		c.gridx++; c.weightx = 1; c.gridwidth = 3; add(fldReleaseYear, c);
-		
-		c.gridy++; c.gridx = -1;
 		c.gridx++; c.weightx = 0; c.gridwidth = 1; add(labPublisher, c);
 		c.gridx++; c.weightx = 1; c.gridwidth = 3; add(cmbbxPublisher, c);
 		
 		c.gridy++; c.gridx = -1;
 		c.gridx++; c.weightx = 0; c.gridwidth = 1; add(labCatalogID, c);
-		c.gridx++; c.weightx = 1; c.gridwidth = 1; add(fldCatalogID, c);
+		c.gridx++; c.weightx = 1; c.gridwidth = 3; add(fldCatalogID, c);
+		
+		c.gridy++; c.gridx = -1;
+		c.gridx++; c.weightx = 0; c.gridwidth = 1; add(labReleaseYear, c);
+		c.gridx++; c.weightx = 1; c.gridwidth = 1; add(fldReleaseYear, c);
 		c.gridx++; c.weightx = 0; c.gridwidth = 1; add(chkbxRead , c);
 		c.gridx++; c.weightx = 0; c.gridwidth = 1; add(chkbxOwned, c);
 		
@@ -296,6 +296,11 @@ class BookPanel extends JPanel
 			assignBookSeriesToCurrentBook(bs);
 		}
 	
+		@Override protected BookSeries getExistingValue(String str)
+		{
+			return main.bookStorage.getBookSeries(str);
+		}
+
 		@Override protected BookSeries addNewValueAndSet(String str)
 		{
 			if (currentBook==null) return null;
@@ -325,6 +330,11 @@ class BookPanel extends JPanel
 			if (currentBook == null) return;
 			currentBook.publisher = p;
 			main.notifier.books.fieldChanged(this, currentBook, Field.Publisher);
+		}
+
+		@Override protected Publisher getExistingValue(String str)
+		{
+			return main.bookStorage.getPublisher(str);
 		}
 
 		@Override protected Publisher addNewValueAndSet(String str)
