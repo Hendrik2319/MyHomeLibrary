@@ -10,14 +10,13 @@ import javax.swing.JTable;
 
 import net.schwarzbaer.java.lib.gui.Tables;
 import net.schwarzbaer.java.lib.gui.Tables.SimplifiedColumnConfig;
-import net.schwarzbaer.java.lib.gui.Tables.SimplifiedRowSorter;
 import net.schwarzbaer.java.tools.myhomelibrary.data.Book;
 
 public class BooksTable extends JTable
 {
 	private static final long serialVersionUID = -4421855766356160275L;
 	        final BooksTableModel tableModel;
-	        final SimplifiedRowSorter tableRowSorter;
+//	        final SimplifiedRowSorter tableRowSorter;
 	private final BooksTableCellRenderer tableCellRenderer;
 	        final JScrollPane tableScrollPane;
 
@@ -26,7 +25,7 @@ public class BooksTable extends JTable
 		setModel(tableModel = new BooksTableModel());
 		
 		setRowHeight(Book.FRONTCOVERTHUMB_MAXHEIGHT+6);
-		setRowSorter(tableRowSorter = new Tables.SimplifiedRowSorter(tableModel));
+		//setRowSorter(tableRowSorter = new Tables.SimplifiedRowSorter(tableModel));
 		setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
 		setColumnSelectionAllowed(false);
 		tableModel.setTable(this);

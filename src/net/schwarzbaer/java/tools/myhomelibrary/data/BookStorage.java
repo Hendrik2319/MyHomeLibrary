@@ -77,17 +77,12 @@ public class BookStorage
 
 	public List<Book> getListOfBooks()
 	{
-		return getList(books, b -> Tools.getIfNotNull(b.title, "<unnamed>"));
+		return getListOfBooks(null);
 	}
 
 	public List<Book> getListOfBooks(Predicate<Book> filter)
 	{
 		return getList(books, b -> Tools.getIfNotNull(b.title, "<unnamed>"), filter);
-	}
-
-	public List<Book> getListOfBooks(Author author)
-	{
-		return getListOfBooks(b -> b.authors.contains(author));
 	}
 
 	public List<BookSeries> getListOfBookSeries()

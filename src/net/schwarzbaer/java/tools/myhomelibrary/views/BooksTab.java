@@ -119,14 +119,18 @@ class BooksTab extends JSplitPane
 		NewBooks         ("Recently Added Books"),
 		BooksOfAuthor    ("Books of Author"),
 		BooksOfSeries    ("Books of Series"),
+		BooksOfPublisher ("Books of Publisher"),
+		NotReadBooks     ("Not Read Books"),
+		NotOwnedBooks    ("Not Owned Books"),
 		IncompleteData   ("Books with incomplete data"),
+		IncompleteCover  ("Books with incomplete cover"),
 		;
 		private final String label;
 		ListType(String label) { this.label = label; }
 		@Override public String toString() { return label; }
 	}
 	
-	private record Selector(BookStorage bookStorage, Author author, BookSeries bs, Supplier<List<Book>> getBooks)
+	private record Selector(BookStorage bookStorage, Author author, BookSeries bookSeries, Publisher publisher, Supplier<List<Book>> getBooks)
 	{
 		static class Factory
 		{
@@ -135,22 +139,27 @@ class BooksTab extends JSplitPane
 			
 			Selector createFor(Author author)
 			{
-				return new Selector(bookStorage, author, null, () -> bookStorage.getListOfBooks(author));
+				return new Selector(bookStorage, author, null, null, () -> bookStorage.getListOfBooks(b -> b.authors.contains(author)));
 			}
 			
-			Selector createFor(BookSeries bs)
+			Selector createFor(BookSeries bookSeries)
 			{
-				return new Selector(bookStorage, null, bs, () -> bs.books);
+				return new Selector(bookStorage, null, bookSeries, null, () -> bookSeries.books);
 			}
 			
+			Selector createFor(Publisher publisher)
+			{
+				return new Selector(bookStorage, null, null, publisher, () -> bookStorage.getListOfBooks(b -> b.publisher == publisher));
+			}
+
 			Selector createForAll()
 			{
-				return new Selector(bookStorage, null, null, () -> bookStorage.getListOfBooks());
+				return new Selector(bookStorage, null, null, null, () -> bookStorage.getListOfBooks());
 			}
 
 			Selector createForPredicate(Predicate<Book> filter)
 			{
-				return new Selector(bookStorage, null, null, () -> bookStorage.getListOfBooks(filter));
+				return new Selector(bookStorage, null, null, null, () -> bookStorage.getListOfBooks(filter));
 			}
 		}
 
@@ -158,8 +167,10 @@ class BooksTab extends JSplitPane
 		{
 			if (author!=null)
 				newBook.authors.add(author);
-			if (bs!=null)
-				bookStorage.assign(newBook, bs);
+			if (bookSeries!=null)
+				bookStorage.assign(newBook, bookSeries);
+			if (publisher!=null)
+				newBook.publisher = publisher;
 		}
 	}
 	
@@ -175,6 +186,11 @@ class BooksTab extends JSplitPane
 		),
 		Release  ("Order by Release", Comparator
 				.<Book,String>comparing(b -> b.release, Comparator.nullsLast(Comparator.naturalOrder()))
+				.thenComparing(COMPARATOR__BY_NAME)
+		),
+		BookSeries ("Order by Book Series", Comparator
+				.<Book,String>comparing(b -> Tools.getIfNotNull(b.bookSeries, null, bs -> bs.toString()), Comparator.nullsLast(Comparator.naturalOrder()))
+				.thenComparing(b -> Tools.getIfNotNull(b.bookSeries, null, bs -> bs.books.indexOf(b)), Comparator.nullsLast(Comparator.naturalOrder()))
 				.thenComparing(COMPARATOR__BY_NAME)
 		),
 		;
@@ -242,7 +258,10 @@ class BooksTab extends JSplitPane
 				{
 				case AllBooks:
 				case NewBooks:
+				case NotReadBooks:
+				case NotOwnedBooks:
 				case IncompleteData:
+				case IncompleteCover:
 					break;
 					
 				case BooksOfAuthor:
@@ -253,6 +272,11 @@ class BooksTab extends JSplitPane
 				case BooksOfSeries:
 					if (selectedObj instanceof BookSeries bs)
 						currentSelector = selectorFactory.createFor(bs);
+					break;
+					
+				case BooksOfPublisher:
+					if (selectedObj instanceof Publisher p)
+						currentSelector = selectorFactory.createFor(p);
 					break;
 				}
 			
@@ -282,6 +306,14 @@ class BooksTab extends JSplitPane
 					currentSelector = selectorFactory.createForPredicate(b -> b.recentlyCreated);
 					break;
 					
+				case NotReadBooks:
+					currentSelector = selectorFactory.createForPredicate(b -> !b.read);
+					break;
+					
+				case NotOwnedBooks:
+					currentSelector = selectorFactory.createForPredicate(b -> !b.owned);
+					break;
+					
 				case BooksOfAuthor:
 					labSelectorText = "  Author: ";
 					selectors = main.bookStorage.getListOfKnownAuthors();
@@ -292,8 +324,17 @@ class BooksTab extends JSplitPane
 					selectors = main.bookStorage.getListOfBookSeries();
 					break;
 					
+				case BooksOfPublisher:
+					labSelectorText = "  Publisher: ";
+					selectors = main.bookStorage.getListOfKnownPublishers();
+					break;
+					
 				case IncompleteData:
 					currentSelector = selectorFactory.createForPredicate( Book::hasIncompleteData );
+					break;
+					
+				case IncompleteCover:
+					currentSelector = selectorFactory.createForPredicate( b -> b.frontCover==null || b.spineCover==null || b.backCover==null );
 					break;
 				}
 			
@@ -317,7 +358,7 @@ class BooksTab extends JSplitPane
 		private static final long serialVersionUID = -8128704594216506559L;
 		private final JButton btnAdd;
 		private final JButton btnRemove;
-		private final JButton btnResetRowOrder;
+//		private final JButton btnResetRowOrder;
 
 		LowerToolBar()
 		{
@@ -355,19 +396,19 @@ class BooksTab extends JSplitPane
 					main.notifier.bookSeries.fieldChanged(this, row.bookSeries, BookSeries.Field.Books);
 			}));
 			
-			addSeparator();
-			
-			add(btnResetRowOrder = Tools.createButton("Reset Row Order", true, GrayCommandIcons.IconGroup.Reload, e -> {
-				table.tableRowSorter.resetSortOrder();
-				table.repaint();
-			}));
+//			addSeparator();
+//			
+//			add(btnResetRowOrder = Tools.createButton("Reset Row Order", true, GrayCommandIcons.IconGroup.Reload, e -> {
+//				table.tableRowSorter.resetSortOrder();
+//				table.repaint();
+//			}));
 		}
 
 		public void updateElements()
 		{
 			btnAdd          .setEnabled(currentSelector!=null);
 			btnRemove       .setEnabled(currentSelector!=null && table.getSelectedRowCount() > 0);
-			btnResetRowOrder.setEnabled(currentSelector!=null);
+//			btnResetRowOrder.setEnabled(currentSelector!=null);
 		}
 	}
 }
