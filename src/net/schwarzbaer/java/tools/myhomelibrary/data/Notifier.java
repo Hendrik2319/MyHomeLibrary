@@ -11,6 +11,8 @@ public class Notifier
 	
 	public final BookChangeController       books      = new BookChangeController();
 	public final BookSeriesChangeController bookSeries = new BookSeriesChangeController();
+	public final AuthorChangeController     authors    = new AuthorChangeController();
+	public final PublisherChangeController  publishers = new PublisherChangeController();
 	public final StorageController          storages   = new StorageController();
 	
 	public static class Controller<Listener>
@@ -38,15 +40,28 @@ public class Notifier
 	{
 		@Override public void fieldChanged  (Object source,     Book  book ,     Book.Field  field ) { forEach("fieldChanged"  , source, l -> l.fieldChanged  (source, book , field )); }
 		@Override public void fieldsChanged (Object source, Set<Book> books, Set<Book.Field> fields) { forEach("fieldsChanged" , source, l -> l.fieldsChanged (source, books, fields)); }
-		@Override public void authorAdded   (Object source, Author    author                       ) { forEach("authorAdded"   , source, l -> l.authorAdded   (source, author       )); }
-		@Override public void publisherAdded(Object source, Publisher publisher                    ) { forEach("publisherAdded", source, l -> l.publisherAdded(source, publisher    )); }
-		@Override public void bookRemoved   (Object source, Book      book                         ) { forEach("bookRemoved"   , source, l -> l.bookRemoved   (source, book         )); }
+		@Override public void added         (Object source,     Book  book                         ) { forEach("added"         , source, l -> l.added         (source, book         )); }
+		@Override public void deleted       (Object source,     Book  book                         ) { forEach("deleted"       , source, l -> l.deleted       (source, book         )); }
 	}
 	
 	public static class BookSeriesChangeController extends Controller<BookSeriesChangeListener> implements BookSeriesChangeListener
 	{
-		@Override public void fieldChanged (Object source,     BookSeries  bookSeries,     BookSeries.Field  field ) { forEach("fieldChanged" , source, l -> l.fieldChanged (source, bookSeries, field )); }
-		@Override public void fieldsChanged(Object source, Set<BookSeries> bookSeries, Set<BookSeries.Field> fields) { forEach("fieldsChanged", source, l -> l.fieldsChanged(source, bookSeries, fields)); }
+		@Override public void fieldChanged (Object source,      BookSeries  bookSeries,     BookSeries.Field  field ) { forEach("fieldChanged" , source, l -> l.fieldChanged (source, bookSeries, field )); }
+		@Override public void fieldsChanged(Object source,  Set<BookSeries> bookSeries, Set<BookSeries.Field> fields) { forEach("fieldsChanged", source, l -> l.fieldsChanged(source, bookSeries, fields)); }
+		@Override public void added        (Object source,      BookSeries  bookSeries                              ) { forEach("added"        , source, l -> l.added        (source, bookSeries        )); }
+		@Override public void deleted      (Object source, List<BookSeries> bookSeries                              ) { forEach("deleted"      , source, l -> l.deleted      (source, bookSeries        )); }
+	}
+	
+	public static class AuthorChangeController extends Controller<AuthorChangeListener> implements AuthorChangeListener
+	{
+		@Override public void added  (Object source,      Author  author ) { forEach("added"  , source, l -> l.added  (source, author )); }
+		@Override public void deleted(Object source, List<Author> authors) { forEach("deleted", source, l -> l.deleted(source, authors)); }
+	}
+	
+	public static class PublisherChangeController extends Controller<PublisherChangeListener> implements PublisherChangeListener
+	{
+		@Override public void added  (Object source,      Publisher  publisher ) { forEach("added"  , source, l -> l.added  (source, publisher )); }
+		@Override public void deleted(Object source, List<Publisher> publishers) { forEach("deleted", source, l -> l.deleted(source, publishers)); }
 	}
 	
 	public static class StorageController extends Controller<StorageListener> implements StorageListener
@@ -58,29 +73,55 @@ public class Notifier
 	{
 		void fieldChanged (Object source,     Book  book ,     Book.Field  field );
 		void fieldsChanged(Object source, Set<Book> books, Set<Book.Field> fields);
-		void authorAdded   (Object source, Author    author   );
-		void publisherAdded(Object source, Publisher publisher);
-		void bookRemoved   (Object source, Book      book     );
+		void added        (Object source,     Book  book );
+		void deleted      (Object source,     Book  book );
 		
 		public static class Adapter implements BookChangeListener
 		{
 			@Override public void fieldChanged (Object source,     Book  book ,     Book.Field  field ) {}
 			@Override public void fieldsChanged(Object source, Set<Book> books, Set<Book.Field> fields) {}
-			@Override public void authorAdded   (Object source, Author    author   ) {}
-			@Override public void publisherAdded(Object source, Publisher publisher) {}
-			@Override public void bookRemoved   (Object source, Book      book     ) {}
+			@Override public void added        (Object source,     Book  book ) {}
+			@Override public void deleted      (Object source,     Book  book ) {}
 		}
 	}
 	
 	public interface BookSeriesChangeListener
 	{
-		void fieldChanged (Object source,     BookSeries  bookSeries,     BookSeries.Field  field );
-		void fieldsChanged(Object source, Set<BookSeries> bookSeries, Set<BookSeries.Field> fields);
+		void fieldChanged (Object source,      BookSeries  bookSeries,     BookSeries.Field  field );
+		void fieldsChanged(Object source,  Set<BookSeries> bookSeries, Set<BookSeries.Field> fields);
+		void added        (Object source,      BookSeries  bookSeries);
+		void deleted      (Object source, List<BookSeries> bookSeries);
 		
 		public static class Adapter implements BookSeriesChangeListener
 		{
-			@Override public void fieldChanged (Object source,     BookSeries  bookSeries,     BookSeries.Field  field ) {}
-			@Override public void fieldsChanged(Object source, Set<BookSeries> bookSeries, Set<BookSeries.Field> fields) {}
+			@Override public void fieldChanged (Object source,      BookSeries  bookSeries,     BookSeries.Field  field ) {}
+			@Override public void fieldsChanged(Object source,  Set<BookSeries> bookSeries, Set<BookSeries.Field> fields) {}
+			@Override public void added        (Object source,      BookSeries  bookSeries) {}
+			@Override public void deleted      (Object source, List<BookSeries> bookSeries) {}
+		}
+	}
+	
+	public interface AuthorChangeListener
+	{
+		void added  (Object source,      Author  author );
+		void deleted(Object source, List<Author> authors);
+		
+		public static class Adapter implements AuthorChangeListener
+		{
+			@Override public void added  (Object source,      Author  author ) {}
+			@Override public void deleted(Object source, List<Author> authors) {}
+		}
+	}
+	
+	public interface PublisherChangeListener
+	{
+		void added  (Object source,      Publisher  publisher );
+		void deleted(Object source, List<Publisher> publishers);
+		
+		public static class Adapter implements PublisherChangeListener
+		{
+			@Override public void added  (Object source,      Publisher  publisher ) {}
+			@Override public void deleted(Object source, List<Publisher> publishers) {}
 		}
 	}
 	

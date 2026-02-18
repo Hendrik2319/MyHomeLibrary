@@ -96,9 +96,43 @@ class BooksTab extends JSplitPane
 				table.tableModel.fireColumnUpdateForFields(fields);
 				BooksTab.this.main.bookStorage.writeToFile();
 			}
-			@Override public void authorAdded   (Object source, Author    author   ) {}
-			@Override public void publisherAdded(Object source, Publisher publisher) {}
-			@Override public void bookRemoved   (Object source, Book      book     ) {}
+			@Override public void added  (Object source, Book book) {}
+			@Override public void deleted(Object source, Book book) {}
+		});
+		
+		this.main.notifier.bookSeries.addListener(new Notifier.BookSeriesChangeListener() {
+			@Override public void fieldChanged (Object source,      BookSeries  bookSeries,     BookSeries.Field  field ) {}
+			@Override public void fieldsChanged(Object source,  Set<BookSeries> bookSeries, Set<BookSeries.Field> fields) {}
+			@Override public void added        (Object source,      BookSeries  bookSeries) { updateCmbbxSelector(); }
+			@Override public void deleted      (Object source, List<BookSeries> bookSeries) { updateCmbbxSelector(); }
+			
+			private void updateCmbbxSelector()
+			{
+				if (currentListType==ListType.BooksOfSeries)
+					upperToolBar.updateCmbbxSelector(BooksTab.this.main.bookStorage.getListOfBookSeries());
+			}
+		});
+		
+		this.main.notifier.authors.addListener(new Notifier.AuthorChangeListener() {
+			@Override public void added  (Object source,      Author  author ) { updateCmbbxSelector(); }
+			@Override public void deleted(Object source, List<Author> authors) { updateCmbbxSelector(); }
+			
+			private void updateCmbbxSelector()
+			{
+				if (currentListType==ListType.BooksOfAuthor)
+					upperToolBar.updateCmbbxSelector(BooksTab.this.main.bookStorage.getListOfKnownAuthors());
+			}
+		});
+		
+		this.main.notifier.publishers.addListener(new Notifier.PublisherChangeListener() {
+			@Override public void added  (Object source,      Publisher  publisher ) { updateCmbbxSelector(); }
+			@Override public void deleted(Object source, List<Publisher> publishers) { updateCmbbxSelector(); }
+			
+			private void updateCmbbxSelector()
+			{
+				if (currentListType==ListType.BooksOfPublisher)
+					upperToolBar.updateCmbbxSelector(BooksTab.this.main.bookStorage.getListOfKnownPublishers());
+			}
 		});
 	}
 
@@ -351,6 +385,17 @@ class BooksTab extends JSplitPane
 			
 			ignoreSelectorChanges = false;
 		}
+		
+		void updateCmbbxSelector(List<? extends Object> selectors)
+		{
+			ignoreSelectorChanges = true;
+			Object selectedObj = cmbbxSelector.getSelectedItem();
+			if (!selectors.contains(selectedObj)) selectedObj = null;
+			cmbbxSelectorModel.removeAllElements();
+			cmbbxSelectorModel.addAll(selectors);
+			cmbbxSelector.setSelectedItem(selectedObj);
+			ignoreSelectorChanges = false;
+		}
 	}
 
 	private class LowerToolBar extends JToolBar
@@ -373,6 +418,7 @@ class BooksTab extends JSplitPane
 				int rowM = table.tableModel.getRowIndex(newBook);
 				int rowV = rowM<0 ? -1 : table.convertRowIndexToView(rowM);
 				if (rowV>=0) table.setRowSelectionInterval(rowV, rowV);
+				main.notifier.books.added(this, newBook);
 			}));
 			
 			add(btnRemove = Tools.createButton("Remove Book", true, GrayCommandIcons.IconGroup.Delete, e -> {
@@ -391,7 +437,7 @@ class BooksTab extends JSplitPane
 				updateTableContent();
 				main.bookStorage.writeToFile();
 				
-				main.notifier.books.bookRemoved(this, row);
+				main.notifier.books.deleted(this, row);
 				if (row.bookSeries!=null)
 					main.notifier.bookSeries.fieldChanged(this, row.bookSeries, BookSeries.Field.Books);
 			}));

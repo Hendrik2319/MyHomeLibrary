@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.Vector;
 import java.util.function.BiConsumer;
 
@@ -44,6 +45,7 @@ import net.schwarzbaer.java.tools.myhomelibrary.data.Author;
 import net.schwarzbaer.java.tools.myhomelibrary.data.Book;
 import net.schwarzbaer.java.tools.myhomelibrary.data.Book.Field;
 import net.schwarzbaer.java.tools.myhomelibrary.data.BookSeries;
+import net.schwarzbaer.java.tools.myhomelibrary.data.Notifier;
 import net.schwarzbaer.java.tools.myhomelibrary.data.Publisher;
 
 class BookPanel extends JPanel
@@ -154,7 +156,7 @@ class BookPanel extends JPanel
 		labPublisher   = new JLabel("Publisher"  +":  ");
 		labCatalogID   = new JLabel("Catalog ID" +":  ");
 		
-		coverImagesPanel = new CoverImagesPanel(main);
+		coverImagesPanel = new CoverImagesPanel(this.main);
 		
 		c.weightx = 0;
 		c.weighty = 0;
@@ -201,6 +203,31 @@ class BookPanel extends JPanel
 		add(coverImagesPanel, c);
 		
 		updateFields();
+		
+		this.main.notifier.bookSeries.addListener(new Notifier.BookSeriesChangeListener() {
+			@Override public void fieldChanged (Object source,      BookSeries  bookSeries,     BookSeries.Field  field ) {}
+			@Override public void fieldsChanged(Object source,  Set<BookSeries> bookSeries, Set<BookSeries.Field> fields) {}
+			@Override public void added        (Object source,      BookSeries  bookSeries) { updateCmbbxBookSeries(source); }
+			@Override public void deleted      (Object source, List<BookSeries> bookSeries) { updateCmbbxBookSeries(source); }
+			
+			private void updateCmbbxBookSeries(Object source)
+			{
+				if (source == BookPanel.this) return;
+				cmbbxBookSeries.updateValues();
+			}
+		});
+		
+		this.main.notifier.publishers.addListener(new Notifier.PublisherChangeListener()
+		{
+			@Override public void added  (Object source,      Publisher  publisher ) { updateCmbbxPublisher(source); }
+			@Override public void deleted(Object source, List<Publisher> publishers) { updateCmbbxPublisher(source); }
+			
+			private void updateCmbbxPublisher(Object source)
+			{
+				if (source == BookPanel.this) return;
+				cmbbxPublisher.updateValues();
+			}
+		});
 	}
 	
 	private void assignBookSeriesToCurrentBook(BookSeries bs)
@@ -307,6 +334,7 @@ class BookPanel extends JPanel
 			BookSeries bs = main.bookStorage.createBookSeries();
 			bs.name = str;
 			assignBookSeriesToCurrentBook(bs);
+			main.notifier.bookSeries.added(BookPanel.this, bs);
 			return bs;
 		}
 	}
@@ -329,7 +357,7 @@ class BookPanel extends JPanel
 		{
 			if (currentBook == null) return;
 			currentBook.publisher = p;
-			main.notifier.books.fieldChanged(this, currentBook, Field.Publisher);
+			main.notifier.books.fieldChanged(BookPanel.this, currentBook, Field.Publisher);
 		}
 
 		@Override protected Publisher getExistingValue(String str)
@@ -341,8 +369,8 @@ class BookPanel extends JPanel
 		{
 			if (currentBook==null) return null;
 			currentBook.publisher = main.bookStorage.getOrCreatePublisher(str);
-			main.notifier.books.fieldChanged(this, currentBook, Field.Publisher);
-			main.notifier.books.publisherAdded(this, currentBook.publisher);
+			main.notifier.books.fieldChanged(BookPanel.this, currentBook, Field.Publisher);
+			main.notifier.publishers.added(BookPanel.this, currentBook.publisher);
 			return currentBook.publisher;
 		}
 	}
@@ -654,7 +682,7 @@ class BookPanel extends JPanel
 				else if (selectedNewName!=null)
 				{
 					result = main.bookStorage.getOrCreateAuthor(selectedNewName);
-					main.notifier.books.authorAdded(this, result);
+					main.notifier.authors.added(this, result);
 				}
 				closeDialog();
 			});

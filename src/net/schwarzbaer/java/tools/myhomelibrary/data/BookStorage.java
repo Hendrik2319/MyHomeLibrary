@@ -11,8 +11,10 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -132,6 +134,72 @@ public class BookStorage
 		
 		if (book.bookSeries!=null)
 			book.bookSeries.books.remove(book);
+	}
+
+	public List<BookSeries> deleteEmptyBookSeries()
+	{
+		List<BookSeries> deleted = new ArrayList<>();
+		
+		List<String> bookSeriesIDs = new ArrayList<>( bookSeries.keySet() );
+		for (String bookSeriesID : bookSeriesIDs)
+		{
+			BookSeries bs = bookSeries.get(bookSeriesID);
+			if (bs.books.isEmpty())
+			{
+				bookSeries.remove(bookSeriesID);
+				deleted.add(bs);
+			}
+		}
+		
+		return deleted;
+	}
+
+	public List<Author> deleteUnusedAuthors()
+	{
+		Set<Author> inUse = new HashSet<>();
+		
+		for (Book b : books.values())
+			for (Author a : b.authors)
+				inUse.add(a);
+		
+		Set<String> idsToDelete = new HashSet<>();
+		authors.forEach((id,a)->{
+			if (!inUse.contains(a))
+				idsToDelete.add(id);
+		});
+		
+		ArrayList<Author> deleted = new ArrayList<>();
+		idsToDelete.forEach(id -> {
+			Author a = authors.remove(id);
+			if (a!=null)
+				deleted.add(a);
+		});
+		
+		return deleted;
+	}
+
+	public List<Publisher> deleteUnusedPublishers()
+	{
+		Set<Publisher> inUse = new HashSet<>();
+		
+		for (Book b : books.values())
+			if (b.publisher!=null)
+				inUse.add(b.publisher);
+		
+		Set<String> idsToDelete = new HashSet<>();
+		publishers.forEach((id,p)->{
+			if (!inUse.contains(p))
+				idsToDelete.add(id);
+		});
+		
+		ArrayList<Publisher> deleted = new ArrayList<>();
+		idsToDelete.forEach(id -> {
+			Publisher p = publishers.remove(id);
+			if (p!=null)
+				deleted.add(p);
+		});
+		
+		return deleted;
 	}
 
 	public Book createBook()
