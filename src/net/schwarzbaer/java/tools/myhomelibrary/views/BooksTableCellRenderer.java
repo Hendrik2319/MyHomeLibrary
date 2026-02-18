@@ -108,7 +108,10 @@ class BooksTableCellRenderer implements TableCellRenderer
 		private final JLabel fldBookSeries;
 		private final JLabel fldPublisher;
 		private final JLabel fldCatalogID;
-		private final JLabel fldReleaseYear;
+		private final JLabel fldRelease;
+		private final JLabel fldISBN;
+		private final JLabel fldPrice;
+		private final JLabel fldPageCount;
 		private final JLabel fldCover;
 		private final JLabel fldNotRead;
 		private final JLabel fldNotOwned;
@@ -120,7 +123,7 @@ class BooksTableCellRenderer implements TableCellRenderer
 			c.fill = GridBagConstraints.BOTH;
 			c.weightx = 1;
 			c.weighty = 0;
-			c.gridwidth = 2;
+			c.gridwidth = 3;
 			c.gridx = 0;
 			c.gridy = -1;
 			c.gridy++; add(fldTitle       = new JLabel(), c);
@@ -129,22 +132,25 @@ class BooksTableCellRenderer implements TableCellRenderer
 			
 			c.gridy++;
 			c.gridwidth = 1;
-			c.weightx = 1; c.gridx = 0; add(fldPublisher   = new JLabel(), c);
-			c.weightx = 0; c.gridx = 1; add(fldNotRead     = new JLabel(), c);
+			c.weightx = 1; c.gridx = 0; add(fldPublisher = new JLabel(), c);
+			c.weightx = 1; c.gridx = 1; add(fldPrice     = new JLabel(), c);
+			c.weightx = 0; c.gridx = 2; add(fldNotRead   = new JLabel(), c);
 			
 			c.gridy++;
 			c.gridwidth = 1;
-			c.weightx = 1; c.gridx = 0; add(fldCatalogID   = new JLabel(), c);
-			c.weightx = 0; c.gridx = 1; add(fldNotOwned    = new JLabel(), c);
+			c.weightx = 1; c.gridx = 0; add(fldCatalogID = new JLabel(), c);
+			c.weightx = 1; c.gridx = 1; add(fldISBN      = new JLabel(), c);
+			c.weightx = 0; c.gridx = 2; add(fldNotOwned  = new JLabel(), c);
 			
 			c.gridy++;
 			c.gridwidth = 1;
-			c.weightx = 1; c.gridx = 0; add(fldReleaseYear = new JLabel(), c);
-			c.weightx = 0; c.gridx = 1; add(fldCover       = new JLabel(), c);
+			c.weightx = 1; c.gridx = 0; add(fldRelease   = new JLabel(), c);
+			c.weightx = 1; c.gridx = 1; add(fldPageCount = new JLabel(), c);
+			c.weightx = 0; c.gridx = 2; add(fldCover     = new JLabel(), c);
 
 			c.weightx = 1;
 			c.weighty = 1;
-			c.gridwidth = 2;
+			c.gridwidth = 3;
 			c.gridx = 0; 
 			c.gridy++; add(new JLabel(), c);
 			
@@ -162,7 +168,10 @@ class BooksTableCellRenderer implements TableCellRenderer
 						fldBookSeries .setForeground(fgColor);
 						fldPublisher  .setForeground(fgColor);
 						fldCatalogID  .setForeground(fgColor);
-						fldReleaseYear.setForeground(fgColor);
+						fldRelease    .setForeground(fgColor);
+						fldISBN       .setForeground(fgColor);
+						fldPrice      .setForeground(fgColor);
+						fldPageCount  .setForeground(fgColor);
 						fldCover      .setForeground(fgColor);
 						fldNotRead    .setForeground(fgColor);
 						fldNotOwned   .setForeground(fgColor);
@@ -180,6 +189,9 @@ class BooksTableCellRenderer implements TableCellRenderer
 					field==Book.Field.Publisher  ||
 					field==Book.Field.CatalogID  ||
 					field==Book.Field.Release    ||
+					field==Book.Field.ISBN       ||
+					field==Book.Field.Price      ||
+					field==Book.Field.PageCount  ||
 					field==Book.Field.FrontCover ||
 					field==Book.Field.SpineCover ||
 					field==Book.Field.BackCover  ||
@@ -202,7 +214,10 @@ class BooksTableCellRenderer implements TableCellRenderer
 			));
 			fldPublisher  .setText("Publisher: %s" .formatted(book==null || book.publisher==null || book.publisher.name().isBlank() ? "---" : book.publisher.name()    ));
 			fldCatalogID  .setText("Catalog ID: %s".formatted(book==null || book.catalogID==null || book.catalogID.isBlank()        ? "---" : book.catalogID           ));
-			fldReleaseYear.setText("Release: %s"   .formatted(book==null || book.release  ==null || book.release  .isBlank()        ? "---" : book.release             ));
+			fldRelease    .setText("Release: %s"   .formatted(book==null || book.release  ==null || book.release  .isBlank()        ? "---" : book.release             ));
+			fldISBN       .setText("ISBN: %s"      .formatted(book==null || book.isbn     ==null || book.isbn     .isBlank()        ? "---" : book.isbn                ));
+			fldPrice      .setText("Price: %s"     .formatted(book==null || book.price==0                                           ? "---" : "%1.2f €".formatted(book.price)));
+			fldPageCount  .setText("Pages: %s"     .formatted(book==null || book.pagecount==0                                       ? "---" : book.pagecount           ));
 			fldCover      .setText("Cover: %s"     .formatted(
 					book==null
 						? "---"

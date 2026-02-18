@@ -7,7 +7,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
-import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -23,7 +22,6 @@ import net.schwarzbaer.java.tools.myhomelibrary.FileIO;
 import net.schwarzbaer.java.tools.myhomelibrary.FileIO.FileIOException;
 import net.schwarzbaer.java.tools.myhomelibrary.MyHomeLibrary;
 import net.schwarzbaer.java.tools.myhomelibrary.Tools;
-import net.schwarzbaer.java.tools.myhomelibrary.data.UniqueID.UniqueIDException;
 
 public class BookStorage
 {
@@ -250,7 +248,7 @@ public class BookStorage
 
 	private enum Field
 	{
-		ID, name, book, title, bookSeries, author, release, publisher, catalogID, frontCover, spineCover, backCover, not_read, not_owned
+		ID, name, book, title, bookSeries, author, release, publisher, catalogID, frontCover, spineCover, backCover, not_read, not_owned, isbn, price, pagecount
 	}
 	
 	private static String getLineValue(String line, Field field)
@@ -261,7 +259,6 @@ public class BookStorage
 		return null;
 	}
 
-	@SuppressWarnings("unused")
 	private int parseInt(String str) throws Exception
 	{
 		try
@@ -272,6 +269,19 @@ public class BookStorage
 		{
 			//ex.printStackTrace();
 			throw new Exception("Can't parse \"%s\" to integer: ".formatted(str), ex);
+		}
+	}
+
+	private double parseDouble(String str) throws Exception
+	{
+		try
+		{
+			return Double.parseDouble(str);
+		}
+		catch (NumberFormatException ex)
+		{
+			//ex.printStackTrace();
+			throw new Exception("Can't parse \"%s\" to double: ".formatted(str), ex);
 		}
 	}
 
@@ -370,6 +380,9 @@ public class BookStorage
 					if ((valueStr = getLineValue(line, Field.release    ))!=null) currentBook.release     = valueStr;
 					if ((valueStr = getLineValue(line, Field.publisher  ))!=null) currentBook.publisher   = getOrCreatePublisher(valueStr);
 					if ((valueStr = getLineValue(line, Field.catalogID  ))!=null) currentBook.catalogID   = valueStr;
+					if ((valueStr = getLineValue(line, Field.isbn       ))!=null) currentBook.isbn        = valueStr;
+					if ((valueStr = getLineValue(line, Field.price      ))!=null) currentBook.price       = parseDouble(valueStr);
+					if ((valueStr = getLineValue(line, Field.pagecount  ))!=null) currentBook.pagecount   = parseInt(valueStr);
 					if ((valueStr = getLineValue(line, Field.frontCover ))!=null) currentBook.frontCover  = valueStr;
 					if ((valueStr = getLineValue(line, Field.spineCover ))!=null) currentBook.spineCover  = valueStr;
 					if ((valueStr = getLineValue(line, Field.backCover  ))!=null) currentBook.backCover   = valueStr;
@@ -412,22 +425,10 @@ public class BookStorage
 		}
 		catch (FileNotFoundException ex)
 		{}
-		catch (IOException | UncheckedIOException ex)
-		{
-			//ex.printStackTrace();
-			System.err.printf("%s while reading BookStorage in line %d: %s%n", ex.getClass().getCanonicalName(), ln, ex.getMessage());
-		}
-		catch (UniqueIDException ex)
-		{
-			//ex.printStackTrace();
-			System.err.printf("UniqueIDException while reading BookStorage in line %d: %s%n", ln, ex.getMessage());
-		}
 		catch (Exception ex)
 		{
 			//ex.printStackTrace();
-			System.err.printf("%s while reading BookStorage in line %d: %s%n", ex.getClass().getCanonicalName(), ln, ex.getMessage());
-			for (Throwable cause = ex.getCause(); cause != null; cause = cause.getCause())
-				System.err.printf("   caused by %s: %s%n", cause.getClass().getCanonicalName(), cause.getMessage());
+			showReadException(ln, ex);
 		}
 		
 		Tools.setTaskTitle(pd, "Read FrontCover Thumbs", 0, 0, books.size());
@@ -477,6 +478,9 @@ public class BookStorage
 				if (b.release    !=null) out.printf("%s = %s%n", Field.release    , b.release      );
 				if (b.publisher  !=null) out.printf("%s = %s%n", Field.publisher  , b.publisher    );
 				if (b.catalogID  !=null) out.printf("%s = %s%n", Field.catalogID  , b.catalogID    );
+				if (b.isbn       !=null) out.printf("%s = %s%n", Field.isbn       , b.isbn         );
+				if (b.price      != 0  ) out.printf("%s = %s%n", Field.price      , Double.toString(b.price));
+				if (b.pagecount  != 0  ) out.printf("%s = %s%n", Field.pagecount  , b.pagecount    );
 				if (b.frontCover !=null) out.printf("%s = %s%n", Field.frontCover , b.frontCover   );
 				if (b.spineCover !=null) out.printf("%s = %s%n", Field.spineCover , b.spineCover   );
 				if (b.backCover  !=null) out.printf("%s = %s%n", Field.backCover  , b.backCover    );
@@ -490,7 +494,23 @@ public class BookStorage
 		catch (IOException ex)
 		{
 			//ex.printStackTrace();
-			System.err.printf("IOException while writing BookStorage: %s%n", ex.getMessage());
+			showWriteException(ex);
 		}
+	}
+
+	private void showReadException(int ln, Exception ex)
+	{
+		showException(ex, "%s while reading BookStorage in line %d: %s%n", ex.getClass().getCanonicalName(), ln, ex.getMessage());
+	}
+	private void showWriteException(Exception ex)
+	{
+		showException(ex, "%s while writing BookStorage: %s%n", ex.getClass().getCanonicalName(), ex.getMessage());
+	}
+
+	private void showException(Exception ex, String format, Object... values)
+	{
+		System.err.printf(format, values);
+		for (Throwable cause = ex.getCause(); cause != null; cause = cause.getCause())
+			System.err.printf("   caused by %s: %s%n", cause.getClass().getCanonicalName(), cause.getMessage());
 	}
 }

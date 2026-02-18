@@ -58,8 +58,11 @@ class BookPanel extends JPanel
 	private final JTextField fldTitle;
 	private final JTextField fldAuthors;
 	private final JTextField fldBookSeriesPos;
-	private final JTextField fldReleaseYear;
+	private final JTextField fldRelease;
 	private final JTextField fldCatalogID;
+	private final JTextField fldISBN;
+	private final JTextField fldPrice;
+	private final JTextField fldPageCount;
 	private final JButton btnAddAuthor;
 	private final JButton btnEditAuthors;
 	private final JButton btnChangeBSPos;
@@ -71,9 +74,12 @@ class BookPanel extends JPanel
 	private final JLabel labTitle;
 	private final JLabel labAuthors;
 	private final JLabel labBookSeries;
-	private final JLabel labReleaseYear;
+	private final JLabel labRelease;
 	private final JLabel labPublisher;
 	private final JLabel labCatalogID;
+	private final JLabel labISBN;
+	private final JLabel labPrice;
+	private final JLabel labPageCount;
 	private final CoverImagesPanel coverImagesPanel;
 	private final Tools.GUIConfigurator guiConfigurator;
 	
@@ -91,11 +97,14 @@ class BookPanel extends JPanel
 
 		labID = new JLabel("###");
 		
-		fldTitle = new JTextField();
-		fldCatalogID = new JTextField();
-		fldReleaseYear = new JTextField();
+		fldTitle       = new JTextField();
+		fldCatalogID   = new JTextField();
+		fldRelease = new JTextField();
+		fldISBN        = new JTextField();
+		fldPrice       = new JTextField();
+		fldPageCount   = new JTextField();
 		
-		fldAuthors = new JTextField();
+		fldAuthors       = new JTextField();
 		fldBookSeriesPos = new JTextField();
 		fldBookSeriesPos.setHorizontalAlignment(JTextField.CENTER);
 		
@@ -132,9 +141,12 @@ class BookPanel extends JPanel
 		cmbbxPublisher = new PublisherComboBox();
 		
 		guiConfigurator = new Tools.GUIConfigurator( fldTitle.getForeground(), fldTitle.getBackground() );
-		guiConfigurator.configureStringField(fldTitle      , str -> !str.isBlank(), str -> Tools.doIfNotNull(currentBook, b -> { b.title     = str; this.main.notifier.books.fieldChanged(this, b, Field.Title    ); }));
-		guiConfigurator.configureStringField(fldCatalogID  , null                 , str -> Tools.doIfNotNull(currentBook, b -> { b.catalogID = str; this.main.notifier.books.fieldChanged(this, b, Field.CatalogID); }));
-		guiConfigurator.configureStringField(fldReleaseYear, null                 , str -> Tools.doIfNotNull(currentBook, b -> { b.release   = str; this.main.notifier.books.fieldChanged(this, b, Field.Release  ); }));
+		guiConfigurator.configureStringField(fldTitle      , str -> !str.isBlank()                , str -> Tools.doIfNotNull(currentBook, b -> { b.title     = str; this.main.notifier.books.fieldChanged(this, b, Field.Title    ); }));
+		guiConfigurator.configureStringField(fldCatalogID  , null                                 , str -> Tools.doIfNotNull(currentBook, b -> { b.catalogID = str; this.main.notifier.books.fieldChanged(this, b, Field.CatalogID); }));
+		guiConfigurator.configureStringField(fldRelease    , null                                 , str -> Tools.doIfNotNull(currentBook, b -> { b.release   = str; this.main.notifier.books.fieldChanged(this, b, Field.Release  ); }));
+		guiConfigurator.configureStringField(fldISBN       , null                                 , str -> Tools.doIfNotNull(currentBook, b -> { b.isbn      = str; this.main.notifier.books.fieldChanged(this, b, Field.ISBN     ); }));
+		guiConfigurator.configureDoubleField(fldPrice      , val -> Double.isFinite(val) && val>=0, val -> Tools.doIfNotNull(currentBook, b -> { b.price     = val; this.main.notifier.books.fieldChanged(this, b, Field.Price    ); }));
+		guiConfigurator.configureIntField   (fldPageCount  , val -> val >= 0                      , val -> Tools.doIfNotNull(currentBook, b -> { b.pagecount = val; this.main.notifier.books.fieldChanged(this, b, Field.PageCount); }));
 		guiConfigurator.configureOutputField(fldAuthors);
 		guiConfigurator.configureOutputField(fldBookSeriesPos);
 		
@@ -149,12 +161,15 @@ class BookPanel extends JPanel
 			this.main.notifier.books.fieldChanged(this, currentBook, Field.Owned);
 		});
 		
-		labTitle       = new JLabel("Title"      +":  ");
-		labAuthors     = new JLabel("Author(s)"  +":  ");
-		labBookSeries  = new JLabel("Book Series"+":  ");
-		labReleaseYear = new JLabel("Release"    +":  ");
-		labPublisher   = new JLabel("Publisher"  +":  ");
-		labCatalogID   = new JLabel("Catalog ID" +":  ");
+		labTitle      = new JLabel(  "Title"      +":  ");
+		labAuthors    = new JLabel(  "Author(s)"  +":  ");
+		labBookSeries = new JLabel(  "Book Series"+":  ");
+		labRelease    = new JLabel(  "Release"    +":  ");
+		labPublisher  = new JLabel(  "Publisher"  +":  ");
+		labCatalogID  = new JLabel(  "Catalog ID" +":  ");
+		labISBN       = new JLabel("  ISBN"       +":  ");
+		labPrice      = new JLabel("  Price (€)"  +":  ");
+		labPageCount  = new JLabel("  Page Count" +":  ");
 		
 		coverImagesPanel = new CoverImagesPanel(this.main);
 		
@@ -164,33 +179,39 @@ class BookPanel extends JPanel
 		c.gridx = -1;
 		
 		c.gridy++; c.gridx = -1;
-		c.gridx++; c.weightx = 0; c.gridwidth = 1; add(labTitle, c);
-		c.gridx++; c.weightx = 1; c.gridwidth = 1; add(fldTitle, c);
-		c.gridx++; c.weightx = 0; c.gridwidth = 2; add(labID, c);
+		c.gridx++;  c.weightx = 0; c.gridwidth = 1; add(labTitle, c);
+		c.gridx++;  c.weightx = 1; c.gridwidth = 3; add(fldTitle, c);
+		c.gridx+=3; c.weightx = 0; c.gridwidth = 2; add(labID, c);
 		
 		c.gridy++; c.gridx = -1;
-		c.gridx++; c.weightx = 0; c.gridwidth = 1; add(labAuthors, c);
-		c.gridx++; c.weightx = 1; c.gridwidth = 1; add(fldAuthors, c);
-		c.gridx++; c.weightx = 0; c.gridwidth = 1; add(btnAddAuthor, c);
-		c.gridx++; c.weightx = 0; c.gridwidth = 1; add(btnEditAuthors, c);
+		c.gridx++;  c.weightx = 0; c.gridwidth = 1; add(labAuthors, c);
+		c.gridx++;  c.weightx = 1; c.gridwidth = 3; add(fldAuthors, c);
+		c.gridx+=3; c.weightx = 0; c.gridwidth = 1; add(btnAddAuthor, c);
+		c.gridx++;  c.weightx = 0; c.gridwidth = 1; add(btnEditAuthors, c);
 		
 		c.gridy++; c.gridx = -1;
-		c.gridx++; c.weightx = 0; c.gridwidth = 1; add(labBookSeries, c);
-		c.gridx++; c.weightx = 1; c.gridwidth = 1; add(cmbbxBookSeries, c);
-		c.gridx++; c.weightx = 0; c.gridwidth = 1; add(fldBookSeriesPos, c);
-		c.gridx++; c.weightx = 0; c.gridwidth = 1; add(btnChangeBSPos, c);
+		c.gridx++;  c.weightx = 0; c.gridwidth = 1; add(labBookSeries, c);
+		c.gridx++;  c.weightx = 1; c.gridwidth = 3; add(cmbbxBookSeries, c);
+		c.gridx+=3; c.weightx = 0; c.gridwidth = 1; add(fldBookSeriesPos, c);
+		c.gridx++;  c.weightx = 0; c.gridwidth = 1; add(btnChangeBSPos, c);
 		
 		c.gridy++; c.gridx = -1;
 		c.gridx++; c.weightx = 0; c.gridwidth = 1; add(labPublisher, c);
-		c.gridx++; c.weightx = 1; c.gridwidth = 3; add(cmbbxPublisher, c);
+		c.gridx++; c.weightx = 1; c.gridwidth = 1; add(cmbbxPublisher, c);
+		c.gridx++; c.weightx = 0; c.gridwidth = 1; add(labPrice, c);
+		c.gridx++; c.weightx = 1; c.gridwidth = 3; add(fldPrice, c);
 		
 		c.gridy++; c.gridx = -1;
 		c.gridx++; c.weightx = 0; c.gridwidth = 1; add(labCatalogID, c);
-		c.gridx++; c.weightx = 1; c.gridwidth = 3; add(fldCatalogID, c);
+		c.gridx++; c.weightx = 1; c.gridwidth = 1; add(fldCatalogID, c);
+		c.gridx++; c.weightx = 0; c.gridwidth = 1; add(labISBN, c);
+		c.gridx++; c.weightx = 1; c.gridwidth = 3; add(fldISBN, c);
 		
 		c.gridy++; c.gridx = -1;
-		c.gridx++; c.weightx = 0; c.gridwidth = 1; add(labReleaseYear, c);
-		c.gridx++; c.weightx = 1; c.gridwidth = 1; add(fldReleaseYear, c);
+		c.gridx++; c.weightx = 0; c.gridwidth = 1; add(labRelease, c);
+		c.gridx++; c.weightx = 1; c.gridwidth = 1; add(fldRelease, c);
+		c.gridx++; c.weightx = 0; c.gridwidth = 1; add(labPageCount, c);
+		c.gridx++; c.weightx = 1; c.gridwidth = 1; add(fldPageCount, c);
 		c.gridx++; c.weightx = 0; c.gridwidth = 1; add(chkbxRead , c);
 		c.gridx++; c.weightx = 0; c.gridwidth = 1; add(chkbxOwned, c);
 		
@@ -274,8 +295,11 @@ class BookPanel extends JPanel
 		fldTitle        .setText(Tools.getIfNotNull(currentBook, "", b -> b.title));
 		fldAuthors      .setText(Tools.getIfNotNull(currentBook, "", b -> b.concatenateAuthors()));
 		fldBookSeriesPos.setText(Tools.getIfNotNull(currentBook, "", b -> Tools.getIfNotNull(b.bookSeries, "", bs -> Tools.toOrdinalString(bs.books.indexOf(b)+1) )));
-		fldReleaseYear  .setText(Tools.getIfNotNull(currentBook, "", b -> b.release  ));
+		fldRelease      .setText(Tools.getIfNotNull(currentBook, "", b -> b.release  ));
 		fldCatalogID    .setText(Tools.getIfNotNull(currentBook, "", b -> b.catalogID));
+		fldISBN         .setText(Tools.getIfNotNull(currentBook, "", b -> b.isbn     ));
+		fldPrice        .setText(Tools.getIfNotNull(currentBook, "", b -> b.price    ==0 ? "" : Double .toString(b.price    )));
+		fldPageCount    .setText(Tools.getIfNotNull(currentBook, "", b -> b.pagecount==0 ? "" : Integer.toString(b.pagecount)));
 		cmbbxBookSeries .setSelectedItem(Tools.getIfNotNull(currentBook, null, b -> b.bookSeries));
 		cmbbxPublisher  .setSelectedItem(Tools.getIfNotNull(currentBook, null, b -> b.publisher ));
 		chkbxRead       .setSelected(Tools.getIfNotNull(currentBook, false, b -> b.read ));

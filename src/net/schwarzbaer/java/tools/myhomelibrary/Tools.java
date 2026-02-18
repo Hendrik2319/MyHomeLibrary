@@ -8,6 +8,8 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.function.DoubleConsumer;
+import java.util.function.DoublePredicate;
 import java.util.function.Function;
 import java.util.function.IntConsumer;
 import java.util.function.IntPredicate;
@@ -199,6 +201,11 @@ public class Tools
 		public void configureOutputField(JTextField field)
 		{
 			field.setEditable(false);
+		}
+
+		public void configureDoubleField(JTextField field, DoublePredicate isOK, DoubleConsumer setValue)
+		{
+			configureField(field, Double::parseDouble, n->isOK.test(n), n->setValue.accept(n));
 		}
 
 		public void configureIntField(JTextField field, IntPredicate isOK, IntConsumer setValue)
