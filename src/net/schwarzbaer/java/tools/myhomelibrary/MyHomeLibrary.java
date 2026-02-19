@@ -62,6 +62,7 @@ public class MyHomeLibrary
 			SplitPane_BooksTab,
 			SplitPane_ImagesTab,
 			ImageImportDialog_CutOutEngine_SubRasterSize,
+			OnlineLibrary,
 		}
 		
 		private enum ValueGroup implements Settings.GroupKeys<ValueKey> {

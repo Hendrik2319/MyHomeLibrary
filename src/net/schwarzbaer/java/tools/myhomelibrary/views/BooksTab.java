@@ -27,6 +27,7 @@ import net.schwarzbaer.java.tools.myhomelibrary.data.Book.Field;
 import net.schwarzbaer.java.tools.myhomelibrary.data.BookSeries;
 import net.schwarzbaer.java.tools.myhomelibrary.data.BookStorage;
 import net.schwarzbaer.java.tools.myhomelibrary.data.Notifier;
+import net.schwarzbaer.java.tools.myhomelibrary.data.OnlineLibraryURL;
 import net.schwarzbaer.java.tools.myhomelibrary.data.Publisher;
 
 class BooksTab extends JSplitPane
@@ -446,8 +447,10 @@ class BooksTab extends JSplitPane
 				if (row==null) return;
 				if (row.isbn==null) return;
 				
-				String nums = Tools.filterStr(row.isbn, Character::isDigit);
-				Tools.showURLInBrowser(main.mainWindow, "https://portal.dnb.de/opac/simpleSearch?query=num+all+%22"+nums+"%22&cqlMode=true");
+				OnlineLibraryURL onlineLibrary = Tools.getOnlineLibrary();
+				if (onlineLibrary==null) return;
+				
+				Tools.showURLInBrowser(main.mainWindow, onlineLibrary.buildURL.apply(row));
 			}));
 		}
 

@@ -3,6 +3,7 @@ package net.schwarzbaer.java.tools.myhomelibrary.views;
 import java.io.File;
 import java.util.List;
 
+import javax.swing.ButtonGroup;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JTabbedPane;
@@ -17,6 +18,7 @@ import net.schwarzbaer.java.tools.myhomelibrary.MyHomeLibrary.AppSettings.ValueK
 import net.schwarzbaer.java.tools.myhomelibrary.Tools;
 import net.schwarzbaer.java.tools.myhomelibrary.data.Author;
 import net.schwarzbaer.java.tools.myhomelibrary.data.BookSeries;
+import net.schwarzbaer.java.tools.myhomelibrary.data.OnlineLibraryURL;
 import net.schwarzbaer.java.tools.myhomelibrary.data.Publisher;
 
 public class MainWindow extends StandardMainWindow
@@ -57,6 +59,7 @@ public class MainWindow extends StandardMainWindow
 		private static final long serialVersionUID = 6298143685728714248L;
 		private final JMenu mnSettings;
 		private final JMenu mnCleanUp;
+		private final JMenu mnOnlineLibrary;
 		
 		MenuBar()
 		{
@@ -66,6 +69,15 @@ public class MainWindow extends StandardMainWindow
 				File file = GlobalSettings.getInstance().askUserForExecutable(MainWindow.this, "Select Browser", GlobalSettings.Key.Browser);
 				if (file!=null) System.out.printf("Path to Browser was set to \"%s\"%n", file.getAbsolutePath());
 			}));
+			
+			mnSettings.add(mnOnlineLibrary = new JMenu("Online Library"));
+			
+			ButtonGroup bg = new ButtonGroup();
+			OnlineLibraryURL onlineLibrary = Tools.getOnlineLibrary();
+			for (OnlineLibraryURL ol : OnlineLibraryURL.values())
+				mnOnlineLibrary.add(Tools.createCheckBoxMenuItem(ol.title, true, ol==onlineLibrary, bg, null, b -> {
+					if (b) Tools.setOnlineLibrary(ol);
+				}));
 			
 			
 			mnCleanUp = add(new JMenu("Clean Up"));

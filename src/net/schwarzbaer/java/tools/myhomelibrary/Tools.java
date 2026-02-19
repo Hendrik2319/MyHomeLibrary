@@ -34,6 +34,7 @@ import net.schwarzbaer.java.lib.globalsettings.GlobalSettings;
 import net.schwarzbaer.java.lib.gui.GeneralIcons;
 import net.schwarzbaer.java.lib.gui.ProgressDialog;
 import net.schwarzbaer.java.lib.gui.ValueListOutput;
+import net.schwarzbaer.java.tools.myhomelibrary.data.OnlineLibraryURL;
 
 public class Tools
 {
@@ -268,6 +269,8 @@ public class Tools
 
 	public static void showURLInBrowser(Component parent, String url)
 	{
+		if (url==null) return;
+		
 		File browser = GlobalSettings.getInstance().getExecutableOrAskUser(parent, "", GlobalSettings.Key.Browser);
 		if (browser==null) return;
 		
@@ -308,5 +311,15 @@ public class Tools
 			chars[i] = (char) ints[i];
 		
 		return new String(chars);
+	}
+	
+	public static OnlineLibraryURL getOnlineLibrary()
+	{
+		return MyHomeLibrary.appSettings.getEnum(MyHomeLibrary.AppSettings.ValueKey.OnlineLibrary, OnlineLibraryURL.DeutscheNationalbibliothek, OnlineLibraryURL.class);
+	}
+	
+	public static void setOnlineLibrary(OnlineLibraryURL ol)
+	{
+		MyHomeLibrary.appSettings.putEnum(MyHomeLibrary.AppSettings.ValueKey.OnlineLibrary, ol);
 	}
 }
