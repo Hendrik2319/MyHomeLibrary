@@ -166,8 +166,8 @@ class BookPanel extends JPanel
 		labBookSeries = new JLabel(  "Book Series"+":  ");
 		labRelease    = new JLabel(  "Release"    +":  ");
 		labPublisher  = new JLabel(  "Publisher"  +":  ");
-		labCatalogID  = new JLabel(  "Catalog ID" +":  ");
-		labISBN       = new JLabel("  ISBN"       +":  ");
+		labISBN       = new JLabel(  "ISBN"       +":  ");
+		labCatalogID  = new JLabel("  Catalog ID" +":  ");
 		labPrice      = new JLabel("  Price (€)"  +":  ");
 		labPageCount  = new JLabel("  Page Count" +":  ");
 		
@@ -202,10 +202,10 @@ class BookPanel extends JPanel
 		c.gridx++; c.weightx = 1; c.gridwidth = 3; add(fldPrice, c);
 		
 		c.gridy++; c.gridx = -1;
-		c.gridx++; c.weightx = 0; c.gridwidth = 1; add(labCatalogID, c);
-		c.gridx++; c.weightx = 1; c.gridwidth = 1; add(fldCatalogID, c);
 		c.gridx++; c.weightx = 0; c.gridwidth = 1; add(labISBN, c);
-		c.gridx++; c.weightx = 1; c.gridwidth = 3; add(fldISBN, c);
+		c.gridx++; c.weightx = 1; c.gridwidth = 1; add(fldISBN, c);
+		c.gridx++; c.weightx = 0; c.gridwidth = 1; add(labCatalogID, c);
+		c.gridx++; c.weightx = 1; c.gridwidth = 3; add(fldCatalogID, c);
 		
 		c.gridy++; c.gridx = -1;
 		c.gridx++; c.weightx = 0; c.gridwidth = 1; add(labRelease, c);
