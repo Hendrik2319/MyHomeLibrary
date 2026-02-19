@@ -219,7 +219,7 @@ class BookPanel extends JPanel
 		c.gridx = 0;
 		c.weightx = 1;
 		c.weighty = 1;
-		c.gridwidth = 4;
+		c.gridwidth = 6;
 		c.fill = GridBagConstraints.BOTH;
 		add(coverImagesPanel, c);
 		

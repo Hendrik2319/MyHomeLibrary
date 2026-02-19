@@ -403,7 +403,7 @@ class BooksTab extends JSplitPane
 		private static final long serialVersionUID = -8128704594216506559L;
 		private final JButton btnAdd;
 		private final JButton btnRemove;
-//		private final JButton btnResetRowOrder;
+		private final JButton btnShowISBN;
 
 		LowerToolBar()
 		{
@@ -422,10 +422,7 @@ class BooksTab extends JSplitPane
 			}));
 			
 			add(btnRemove = Tools.createButton("Remove Book", true, GrayCommandIcons.IconGroup.Delete, e -> {
-				if (table.getSelectedRowCount() != 1) return;
-				int rowV = table.getSelectedRow();
-				int rowM = rowV<0 ? -1 : table.convertRowIndexToModel(rowV);
-				Book row = table.tableModel.getRow(rowM);
+				Book row = getSelectedRow();
 				if (row==null) return;
 				
 				String title = "Are you sure?";
@@ -442,19 +439,32 @@ class BooksTab extends JSplitPane
 					main.notifier.bookSeries.fieldChanged(this, row.bookSeries, BookSeries.Field.Books);
 			}));
 			
-//			addSeparator();
-//			
-//			add(btnResetRowOrder = Tools.createButton("Reset Row Order", true, GrayCommandIcons.IconGroup.Reload, e -> {
-//				table.tableRowSorter.resetSortOrder();
-//				table.repaint();
-//			}));
+			addSeparator();
+			
+			add(btnShowISBN = Tools.createButton("Show Book (ISBN) in online library", true, null, e -> {
+				Book row = getSelectedRow();
+				if (row==null) return;
+				if (row.isbn==null) return;
+				
+				String nums = Tools.filterStr(row.isbn, Character::isDigit);
+				Tools.showURLInBrowser(main.mainWindow, "https://portal.dnb.de/opac/simpleSearch?query=num+all+%22"+nums+"%22&cqlMode=true");
+			}));
+		}
+
+		private Book getSelectedRow()
+		{
+			if (table.getSelectedRowCount() != 1) return null;
+			int rowV = table.getSelectedRow();
+			int rowM = rowV<0 ? -1 : table.convertRowIndexToModel(rowV);
+			return table.tableModel.getRow(rowM);
 		}
 
 		public void updateElements()
 		{
-			btnAdd          .setEnabled(currentSelector!=null);
-			btnRemove       .setEnabled(currentSelector!=null && table.getSelectedRowCount() > 0);
-//			btnResetRowOrder.setEnabled(currentSelector!=null);
+			Book row = getSelectedRow();
+			btnAdd     .setEnabled(currentSelector!=null);
+			btnRemove  .setEnabled(currentSelector!=null && row!=null);
+			btnShowISBN.setEnabled(currentSelector!=null && row!=null && row.isbn!=null && Tools.isBrowserSet());
 		}
 	}
 }

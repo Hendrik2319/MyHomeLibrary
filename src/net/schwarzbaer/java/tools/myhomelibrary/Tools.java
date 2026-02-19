@@ -1,9 +1,12 @@
 package net.schwarzbaer.java.tools.myhomelibrary;
 
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -27,8 +30,10 @@ import javax.swing.JTextField;
 import javax.swing.JToggleButton;
 import javax.swing.SwingUtilities;
 
+import net.schwarzbaer.java.lib.globalsettings.GlobalSettings;
 import net.schwarzbaer.java.lib.gui.GeneralIcons;
 import net.schwarzbaer.java.lib.gui.ProgressDialog;
+import net.schwarzbaer.java.lib.gui.ValueListOutput;
 
 public class Tools
 {
@@ -254,5 +259,54 @@ public class Tools
 				}
 			});
 		}
+	}
+
+	public static boolean isBrowserSet()
+	{
+		return GlobalSettings.getInstance().hasExecutable( GlobalSettings.Key.Browser );
+	}
+
+	public static void showURLInBrowser(Component parent, String url)
+	{
+		File browser = GlobalSettings.getInstance().getExecutableOrAskUser(parent, "", GlobalSettings.Key.Browser);
+		if (browser==null) return;
+		
+		System.out.printf("show URL in browser:%n");
+		System.out.printf("   browser : \"%s\"%n", browser.getAbsolutePath());
+		System.out.printf("   url     : \"%s\"%n", url);
+		
+		try {
+			Process process = Runtime.getRuntime().exec(new String[] { browser.getAbsolutePath(), url });
+			System.out.println(toString(process));
+		}
+		catch (IOException e) { System.err.printf("IOException while showing URL in browser: %s%n", e.getMessage()); }
+	}
+
+	public static String toString(Process process) {
+		ValueListOutput out = new ValueListOutput();
+		out.add(0, "Process", process.toString());
+		try { out.add(0, "Exit Value", process.exitValue()); }
+		catch (Exception e) { out.add(0, "Exit Value", "%s", e.getMessage()); }
+		out.add(0, "HashCode"  , "0x%08X", process.hashCode());
+		out.add(0, "Is Alive"  , process.isAlive());
+		out.add(0, "Class"     , "%s", process.getClass());
+		return out.generateOutput();
+	}
+
+	public static String filterStr(String str, Predicate<Character> predicate)
+	{
+		if (str==null || predicate==null)
+			return str;
+		
+		int[] ints = str
+			.chars()
+			.filter(n -> predicate.test((char)n))
+			.toArray();
+		
+		char[] chars = new char[ints.length];
+		for (int i=0; i<ints.length; i++)
+			chars[i] = (char) ints[i];
+		
+		return new String(chars);
 	}
 }
