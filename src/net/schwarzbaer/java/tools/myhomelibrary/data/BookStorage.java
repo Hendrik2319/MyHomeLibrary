@@ -329,6 +329,8 @@ public class BookStorage
 				
 				if (line.isBlank())
 					continue;
+				if (line.startsWith("#"))
+					continue;
 				
 				if (line.equals(HEADER_BOOK_SERIES))
 				{
@@ -461,6 +463,10 @@ public class BookStorage
 		System.out.printf("Write BookStorage to file \"%s\" ...%n", file.getAbsolutePath());
 		try (PrintWriter out = new PrintWriter(file, StandardCharsets.UTF_8))
 		{
+			out.println("############################################################################");
+			out.println("####        BOOK SERIES                   ##################################");
+			out.println("############################################################################");
+			out.println();
 			bookSeries.values().stream().sorted().forEach(bs -> {
 				out.println(HEADER_BOOK_SERIES);
 				out.printf("%s = %s%n", Field.ID, bs.id);
@@ -469,6 +475,10 @@ public class BookStorage
 				out.println();
 			});
 			
+			out.println("############################################################################");
+			out.println("####        BOOKS                         ##################################");
+			out.println("############################################################################");
+			out.println();
 			books.values().stream().sorted().forEach(b -> {
 				out.println(HEADER_BOOK);
 				out.printf("%s = %s%n", Field.ID, b.id);
