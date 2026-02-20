@@ -8,6 +8,7 @@ import java.util.Set;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
+import javax.swing.BorderFactory;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
@@ -40,9 +41,11 @@ class BooksTab extends JSplitPane
 	private final BookPanel bookPanel;
 	private final UpperToolBar upperToolBar;
 	private final LowerToolBar lowerToolBar;
+	private final JLabel statusField;
 	
 	private ListType currentListType;
 	private Selector currentSelector;
+	private String   currentSelectorValueLabel;
 	private RowOrder currentRowOrder;
 
 	BooksTab(MyHomeLibrary main)
@@ -51,6 +54,7 @@ class BooksTab extends JSplitPane
 		this.main = main;
 		currentListType = ListType.AllBooks;
 		currentSelector = null;
+		currentSelectorValueLabel = null;
 		currentRowOrder = RowOrder.Name;
 		
 		table = new BooksTable();
@@ -59,11 +63,17 @@ class BooksTab extends JSplitPane
 		
 		upperToolBar = new UpperToolBar();
 		lowerToolBar = new LowerToolBar();
+		statusField = new JLabel("");
+		statusField.setBorder(BorderFactory.createLoweredSoftBevelBorder());
+		
+		JPanel lowerToolBarPanel = new JPanel(new BorderLayout());
+		lowerToolBarPanel.add(lowerToolBar, BorderLayout.WEST);
+		lowerToolBarPanel.add(statusField, BorderLayout.CENTER);
 		
 		JPanel leftPanel = new JPanel(new BorderLayout());
 		leftPanel.add(upperToolBar, BorderLayout.PAGE_START);
 		leftPanel.add(table.tableScrollPane, BorderLayout.CENTER);
-		leftPanel.add(lowerToolBar, BorderLayout.PAGE_END);
+		leftPanel.add(lowerToolBarPanel, BorderLayout.PAGE_END);
 		
 		setLeftComponent(leftPanel);
 		setRightComponent(bookPanel);
@@ -146,6 +156,13 @@ class BooksTab extends JSplitPane
 			list.sort(currentRowOrder.comparator);
 		}
 		table.tableModel.setData( list );
+		statusField.setText(
+				list!=null
+					? "  %d Books".formatted(list.size())
+					: currentSelectorValueLabel!=null
+						? "  Please select a %s".formatted(currentSelectorValueLabel)
+						: "  No Data"
+		);
 	}
 
 	private enum ListType
@@ -157,7 +174,8 @@ class BooksTab extends JSplitPane
 		BooksOfPublisher ("Books of Publisher"),
 		NotReadBooks     ("Not Read Books"),
 		NotOwnedBooks    ("Not Owned Books"),
-		IncompleteData   ("Books with incomplete data"),
+		IncompleteBase   ("Books with incomplete base data"),
+		IncompleteExtra  ("Books with incomplete extra data"),
 		IncompleteCover  ("Books with incomplete cover"),
 		;
 		private final String label;
@@ -295,7 +313,8 @@ class BooksTab extends JSplitPane
 				case NewBooks:
 				case NotReadBooks:
 				case NotOwnedBooks:
-				case IncompleteData:
+				case IncompleteBase:
+				case IncompleteExtra:
 				case IncompleteCover:
 					break;
 					
@@ -326,9 +345,9 @@ class BooksTab extends JSplitPane
 			currentListType = cmbbxListType.getItemAt(cmbbxListType.getSelectedIndex());
 			cmbbxSelectorModel.removeAllElements();
 			
-			String labSelectorText = "";
 			List<? extends Object> selectors = null;
 			currentSelector = null;
+			currentSelectorValueLabel = null;
 			
 			if (currentListType != null)
 				switch (currentListType)
@@ -350,30 +369,34 @@ class BooksTab extends JSplitPane
 					break;
 					
 				case BooksOfAuthor:
-					labSelectorText = "  Author: ";
+					currentSelectorValueLabel = "Author";
 					selectors = main.bookStorage.getListOfKnownAuthors();
 					break;
 					
 				case BooksOfSeries:
-					labSelectorText = "  Book Series: ";
+					currentSelectorValueLabel = "Book Series";
 					selectors = main.bookStorage.getListOfBookSeries();
 					break;
 					
 				case BooksOfPublisher:
-					labSelectorText = "  Publisher: ";
+					currentSelectorValueLabel = "Publisher";
 					selectors = main.bookStorage.getListOfKnownPublishers();
 					break;
 					
-				case IncompleteData:
-					currentSelector = selectorFactory.createForPredicate( Book::hasIncompleteData );
+				case IncompleteBase:
+					currentSelector = selectorFactory.createForPredicate( Book::hasIncompleteBaseData );
+					break;
+					
+				case IncompleteExtra:
+					currentSelector = selectorFactory.createForPredicate( Book::hasIncompleteExtraData );
 					break;
 					
 				case IncompleteCover:
-					currentSelector = selectorFactory.createForPredicate( b -> b.frontCover==null || b.spineCover==null || b.backCover==null );
+					currentSelector = selectorFactory.createForPredicate( Book::hasIncompleteCover );
 					break;
 				}
 			
-			labSelector  .setText(labSelectorText);
+			labSelector  .setText(currentSelectorValueLabel==null ? "" : "  %s: ".formatted(currentSelectorValueLabel));
 			labSelector  .setEnabled(selectors!=null);
 			cmbbxSelector.setEnabled(selectors!=null);
 			if (selectors!=null)

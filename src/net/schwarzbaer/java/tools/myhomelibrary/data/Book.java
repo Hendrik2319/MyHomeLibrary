@@ -24,19 +24,28 @@ public class Book implements UniqueID.IdBased<Book>
 	
 	public final String id;
 	public final boolean recentlyCreated;
+	
+	// base data
 	public String title = null;
 	public final List<Author> authors;
 	public Publisher  publisher  = null;
+	
+	// optional data
 	public String     catalogID  = null;
 	public BookSeries bookSeries = null;
+	
+	// extra data
 	public String     release    = null;
 	public String     isbn       = null;
 	public double     price      = 0;
 	public int        pagecount  = 0;
+	
+	// cover
 	public String     frontCover = null;
 	public String      backCover = null;
 	public String     spineCover = null;
 	public BufferedImage frontCoverThumb = null;
+	
 	public boolean read  = true;
 	public boolean owned = true;
 
@@ -47,9 +56,19 @@ public class Book implements UniqueID.IdBased<Book>
 		authors = new ArrayList<>();
 	}
 
-	public boolean hasIncompleteData()
+	public boolean hasIncompleteBaseData()
 	{
-		return authors.isEmpty() || publisher==null || title==null || title.isBlank();
+		return title==null || title.isBlank() || authors.isEmpty() || publisher==null;
+	}
+
+	public boolean hasIncompleteExtraData()
+	{
+		return release==null || isbn==null || price==0 || pagecount==0;
+	}
+
+	public boolean hasIncompleteCover()
+	{
+		return frontCover==null || spineCover==null || backCover==null;
 	}
 
 	public String getTitle()
