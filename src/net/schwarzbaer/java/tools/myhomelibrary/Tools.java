@@ -260,6 +260,16 @@ public class Tools
 				}
 			});
 		}
+
+		public void setText(JTextField field, String text)
+		{
+			field.setText(text);
+			if (field.isEditable())
+			{
+				field.setBackground(defaultTextFieldBackground);
+				field.setForeground(defaultTextFieldForeground);
+			}
+		}
 	}
 
 	public static boolean isBrowserSet()

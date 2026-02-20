@@ -92,6 +92,7 @@ class BooksTab extends JSplitPane
 			@Override public void bookStorageLoaded(Object source)
 			{
 				updateTableContent();
+				lowerToolBar.updateElements();
 				bookPanel.updateAfterBookStorageLoaded();
 			}
 		});
@@ -99,11 +100,13 @@ class BooksTab extends JSplitPane
 		this.main.notifier.books.addListener(new Notifier.BookChangeListener() {
 			@Override public void fieldChanged(Object source, Book book, Field field)
 			{
+				if (field == Field.ISBN) lowerToolBar.updateElements();
 				table.tableModel.fireColumnUpdateForField(field);
 				BooksTab.this.main.bookStorage.writeToFile();
 			}
 			@Override public void fieldsChanged(Object source, Set<Book> books, Set<Field> fields)
 			{
+				if (fields.contains( Field.ISBN )) lowerToolBar.updateElements();
 				table.tableModel.fireColumnUpdateForFields(fields);
 				BooksTab.this.main.bookStorage.writeToFile();
 			}
@@ -438,6 +441,7 @@ class BooksTab extends JSplitPane
 				if (currentSelector!=null)
 					currentSelector.initNewBook(newBook);
 				updateTableContent();
+				updateElements();
 				main.bookStorage.writeToFile();
 				int rowM = table.tableModel.getRowIndex(newBook);
 				int rowV = rowM<0 ? -1 : table.convertRowIndexToView(rowM);
@@ -456,6 +460,7 @@ class BooksTab extends JSplitPane
 				
 				main.bookStorage.removeBook(row);
 				updateTableContent();
+				updateElements();
 				main.bookStorage.writeToFile();
 				
 				main.notifier.books.deleted(this, row);

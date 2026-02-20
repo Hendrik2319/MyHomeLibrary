@@ -291,19 +291,19 @@ class BookPanel extends JPanel
 	{
 		setIgnoreInputEvents(true);
 		
-		labID           .setText(FORMAT_LABEL_ID.formatted(Tools.getIfNotNull(currentBook, "", b -> b.id)));
-		fldTitle        .setText(Tools.getIfNotNull(currentBook, "", b -> b.title));
-		fldAuthors      .setText(Tools.getIfNotNull(currentBook, "", b -> b.concatenateAuthors()));
-		fldBookSeriesPos.setText(Tools.getIfNotNull(currentBook, "", b -> Tools.getIfNotNull(b.bookSeries, "", bs -> Tools.toOrdinalString(bs.books.indexOf(b)+1) )));
-		fldRelease      .setText(Tools.getIfNotNull(currentBook, "", b -> b.release  ));
-		fldCatalogID    .setText(Tools.getIfNotNull(currentBook, "", b -> b.catalogID));
-		fldISBN         .setText(Tools.getIfNotNull(currentBook, "", b -> b.isbn     ));
-		fldPrice        .setText(Tools.getIfNotNull(currentBook, "", b -> b.price    ==0 ? "" : Double .toString(b.price    )));
-		fldPageCount    .setText(Tools.getIfNotNull(currentBook, "", b -> b.pagecount==0 ? "" : Integer.toString(b.pagecount)));
-		cmbbxBookSeries .setSelectedItem(Tools.getIfNotNull(currentBook, null, b -> b.bookSeries));
-		cmbbxPublisher  .setSelectedItem(Tools.getIfNotNull(currentBook, null, b -> b.publisher ));
-		chkbxRead       .setSelected(Tools.getIfNotNull(currentBook, false, b -> b.read ));
-		chkbxOwned      .setSelected(Tools.getIfNotNull(currentBook, false, b -> b.owned));
+		labID          .setText(FORMAT_LABEL_ID.formatted(Tools.getIfNotNull(currentBook, "", b -> b.id)));
+		guiConfigurator.setText(fldTitle        , Tools.getIfNotNull(currentBook, "", b -> b.title));
+		guiConfigurator.setText(fldAuthors      , Tools.getIfNotNull(currentBook, "", b -> b.concatenateAuthors()));
+		guiConfigurator.setText(fldBookSeriesPos, Tools.getIfNotNull(currentBook, "", b -> Tools.getIfNotNull(b.bookSeries, "", bs -> Tools.toOrdinalString(bs.books.indexOf(b)+1) )));
+		guiConfigurator.setText(fldRelease      , Tools.getIfNotNull(currentBook, "", b -> b.release  ));
+		guiConfigurator.setText(fldCatalogID    , Tools.getIfNotNull(currentBook, "", b -> b.catalogID));
+		guiConfigurator.setText(fldISBN         , Tools.getIfNotNull(currentBook, "", b -> b.isbn     ));
+		guiConfigurator.setText(fldPrice        , Tools.getIfNotNull(currentBook, "", b -> b.price    ==0 ? "" : Double .toString(b.price    )));
+		guiConfigurator.setText(fldPageCount    , Tools.getIfNotNull(currentBook, "", b -> b.pagecount==0 ? "" : Integer.toString(b.pagecount)));
+		cmbbxBookSeries.setSelectedItem(Tools.getIfNotNull(currentBook, null, b -> b.bookSeries));
+		cmbbxPublisher .setSelectedItem(Tools.getIfNotNull(currentBook, null, b -> b.publisher ));
+		chkbxRead      .setSelected(Tools.getIfNotNull(currentBook, false, b -> b.read ));
+		chkbxOwned     .setSelected(Tools.getIfNotNull(currentBook, false, b -> b.owned));
 		
 		setIgnoreInputEvents(false);
 		
@@ -797,6 +797,7 @@ class BookPanel extends JPanel
 					this.authors.add(author);
 					listModel.addElement(author);
 					this.updateAfterChange.run();
+					updateButtons();
 				}
 			});
 			btnRemove = Tools.createButton("Remove", true, GrayCommandIcons.IconGroup.Delete, e -> {
@@ -806,6 +807,7 @@ class BookPanel extends JPanel
 					for (Author a : selected)
 						listModel.removeElement(a);
 					this.updateAfterChange.run();
+					updateButtons();
 				}
 			});
 			btnMoveUp   = Tools.createButton("Move", true, GrayCommandIcons.IconGroup.Up  , e -> swap(-1));
