@@ -85,16 +85,19 @@ public class MainWindow extends StandardMainWindow
 			mnCleanUp.add(Tools.createMenuItem("Delete Empty Book Series", true, GrayCommandIcons.IconGroup.Delete, e -> {
 				List<BookSeries> deleted = main.bookStorage.deleteEmptyBookSeries();
 				main.notifier.bookSeries.deleted(MainWindow.this, deleted);
+				main.bookStorage.writeToFile();
 			}));
 			
 			mnCleanUp.add(Tools.createMenuItem("Delete Unused Authors", true, GrayCommandIcons.IconGroup.Delete, e -> {
 				List<Author> deleted = main.bookStorage.deleteUnusedAuthors();
 				main.notifier.authors.deleted(MainWindow.this, deleted);
+				main.bookStorage.writeToFile();
 			}));
 			
 			mnCleanUp.add(Tools.createMenuItem("Delete Unused Publishers", true, GrayCommandIcons.IconGroup.Delete, e -> {
 				List<Publisher> deleted = main.bookStorage.deleteUnusedPublishers();
 				main.notifier.publishers.deleted(MainWindow.this, deleted);
+				main.bookStorage.writeToFile();
 			}));
 		}
 	}

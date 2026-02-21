@@ -21,6 +21,13 @@ public enum OnlineLibraryURL
 					isbn -> "https://www.amazon.de/s?search-alias=stripbooks&field-keywords="+isbn
 			)
 	),
+	Thalia("Thalia (de)",
+			b -> Tools.getIfNotNull(
+					b.isbn,
+					null,
+					isbn -> "https://www.thalia.de/suche?sq="+isbn+"&keepTerm=true"
+			)
+	),
 	Wikipedia("Wikipedia (de) - ISBN-Suche",
 			b -> Tools.getIfNotNull(
 					getISBNNumbers(b),
