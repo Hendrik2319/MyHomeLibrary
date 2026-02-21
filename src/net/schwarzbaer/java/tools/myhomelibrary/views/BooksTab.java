@@ -351,6 +351,7 @@ class BooksTab extends JSplitPane
 			List<? extends Object> selectors = null;
 			currentSelector = null;
 			currentSelectorValueLabel = null;
+			BooksTableCellRenderer.HighlightType highlightType = null;
 			
 			if (currentListType != null)
 				switch (currentListType)
@@ -388,17 +389,21 @@ class BooksTab extends JSplitPane
 					
 				case IncompleteBase:
 					currentSelector = selectorFactory.createForPredicate( Book::hasIncompleteBaseData );
+					highlightType = BooksTableCellRenderer.HighlightType.Base;
 					break;
 					
 				case IncompleteExtra:
 					currentSelector = selectorFactory.createForPredicate( Book::hasIncompleteExtraData );
+					highlightType = BooksTableCellRenderer.HighlightType.Extra;
 					break;
 					
 				case IncompleteCover:
 					currentSelector = selectorFactory.createForPredicate( Book::hasIncompleteCover );
+					highlightType = BooksTableCellRenderer.HighlightType.Cover;
 					break;
 				}
 			
+			table.tableCellRenderer.setHighlightType(highlightType);
 			labSelector  .setText(currentSelectorValueLabel==null ? "" : "  %s: ".formatted(currentSelectorValueLabel));
 			labSelector  .setEnabled(selectors!=null);
 			cmbbxSelector.setEnabled(selectors!=null);

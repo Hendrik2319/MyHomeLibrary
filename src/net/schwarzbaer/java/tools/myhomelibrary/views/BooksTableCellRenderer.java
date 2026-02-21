@@ -1,5 +1,6 @@
 package net.schwarzbaer.java.tools.myhomelibrary.views;
 
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Font;
@@ -8,6 +9,8 @@ import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
+import java.util.EnumSet;
+import java.util.function.Predicate;
 
 import javax.swing.ImageIcon;
 import javax.swing.JLabel;
@@ -22,6 +25,20 @@ import net.schwarzbaer.java.tools.myhomelibrary.views.BooksTable.BooksTableModel
 
 class BooksTableCellRenderer implements TableCellRenderer
 {
+	enum HighlightType
+	{
+		Base (f -> Book.isBaseDataField ( InfoBlock.Field.getBookField( f ) )),
+		Extra(f -> Book.isExtraDataField( InfoBlock.Field.getBookField( f ) )),
+		Cover(f -> f == InfoBlock.Field.Cover)
+		;
+		private final Predicate<InfoBlock.Field> shouldBeHighlighted;
+
+		HighlightType(Predicate<InfoBlock.Field> shouldBeHighlighted)
+		{
+			this.shouldBeHighlighted = shouldBeHighlighted;
+		}
+	}
+	
 	private final BooksTable table;
 	private final Tables.LabelRendererComponent labRendComp;
 	private final InfoBlock infoBlock;
@@ -31,6 +48,11 @@ class BooksTableCellRenderer implements TableCellRenderer
 		this.table = table;
 		labRendComp = new Tables.LabelRendererComponent();
 		infoBlock = new InfoBlock();
+	}
+
+	void setHighlightType(HighlightType highlightType)
+	{
+		infoBlock.currentHighlightType = highlightType;
 	}
 
 	@Override
@@ -106,6 +128,35 @@ class BooksTableCellRenderer implements TableCellRenderer
 		private static final long serialVersionUID = -3584565062346788798L;
 		private static final int BORDER_SPACING = 1;
 		private static final int LEFT_SPACING = 3;
+		
+		enum Field
+		{
+			Title, Authors, BookSeries,
+			Publisher, ISBN, Release,
+			Price, CatalogID, PageCount,
+			NotRead, NotOwned, Cover;
+
+			static Book.Field getBookField(Field field)
+			{
+				return switch (field) {
+					case null -> null;
+					case Title      -> Book.Field.Title     ;
+					case Authors    -> Book.Field.Authors   ;
+					case BookSeries -> Book.Field.BookSeries;
+					case Publisher  -> Book.Field.Publisher ;
+					case ISBN       -> Book.Field.ISBN      ;
+					case Release    -> Book.Field.Release   ;
+					case Price      -> Book.Field.Price     ;
+					case CatalogID  -> Book.Field.CatalogID ;
+					case PageCount  -> Book.Field.PageCount ;
+					case NotRead    -> null;
+					case NotOwned   -> null;
+					case Cover      -> null;
+				};
+			}
+		}
+		
+		private final Highlighter highlighter;
 		private final TextBox fldTitle;
 		private final TextBox fldAuthors;
 		private final TextBox fldBookSeries;
@@ -120,28 +171,31 @@ class BooksTableCellRenderer implements TableCellRenderer
 		private final TextBox fldNotOwned;
 		private Integer titleHeight = null;
 		private Integer thirdColumWidth = null;
+		private HighlightType currentHighlightType = null; 
 		
 		InfoBlock()
 		{
+			highlighter = new Highlighter();
+			
 			// first 3 rows
-			fldTitle      = new TextBox();
-			fldAuthors    = new TextBox();
-			fldBookSeries = new TextBox();
+			fldTitle      = new TextBox(Field.Title      , highlighter);
+			fldAuthors    = new TextBox(Field.Authors    , highlighter);
+			fldBookSeries = new TextBox(Field.BookSeries , highlighter);
 			
 			// 1st column
-			fldPublisher = new TextBox();
-			fldISBN      = new TextBox();
-			fldRelease   = new TextBox();
+			fldPublisher = new TextBox(Field.Publisher , highlighter);
+			fldISBN      = new TextBox(Field.ISBN      , highlighter);
+			fldRelease   = new TextBox(Field.Release   , highlighter);
 			
 			// 2nd column
-			fldPrice     = new TextBox();
-			fldCatalogID = new TextBox();
-			fldPageCount = new TextBox();
+			fldPrice     = new TextBox(Field.Price     , highlighter);
+			fldCatalogID = new TextBox(Field.CatalogID , highlighter);
+			fldPageCount = new TextBox(Field.PageCount , highlighter);
 			
 			// 3rd column
-			fldNotRead   = new TextBox();
-			fldNotOwned  = new TextBox();
-			fldCover     = new TextBox();
+			fldNotRead   = new TextBox(Field.NotRead   , highlighter);
+			fldNotOwned  = new TextBox(Field.NotOwned  , highlighter);
+			fldCover     = new TextBox(Field.Cover     , highlighter);
 			
 			fldTitle.setFont(
 					scaleSize(fldTitle.getFont(), 1.25f).deriveFont(Font.BOLD)
@@ -153,6 +207,7 @@ class BooksTableCellRenderer implements TableCellRenderer
 		{
 			int width  = this.getWidth ();
 			int height = this.getHeight();
+			highlighter.update();
 			
 			if (g instanceof Graphics2D g2)
 			{
@@ -225,30 +280,41 @@ class BooksTableCellRenderer implements TableCellRenderer
 
 		public void setData(Book book)
 		{
-			fldTitle     .setText(Tools.getIfNotNull(book, "<null>", b -> Tools.getIfNotNull(b.title, "<unnamed book>")));
-			fldBookSeries.setText(book==null || book.bookSeries==null ? "----" : "%s book of series \"%s\"".formatted(
-					Tools.toOrdinalString( book.bookSeries.books.indexOf(book)+1 ),
-					book.bookSeries.name != null && !book.bookSeries.name.isBlank()
-						? book.bookSeries.name
-						: "<unnamed series>"
+			highlighter.clear();
+			
+			fldTitle     .setText(book==null ? "<null>" : book.title==null ? "<unnamed book>" : Tools.getWithSideEffect( book.title, ()->highlighter.set(Field.Title) ));
+			fldBookSeries.setText(book==null || book.bookSeries==null ? "----" : Tools.getWithSideEffect(
+					"%s book of series \"%s\"".formatted(
+							Tools.toOrdinalString( book.bookSeries.books.indexOf(book)+1 ),
+							book.bookSeries.name != null && !book.bookSeries.name.isBlank()
+								? book.bookSeries.name
+								: "<unnamed series>"
+					),
+					()->highlighter.set(Field.BookSeries)
 			));
 			fldAuthors    .setText("Author%s: %s"  .formatted(
 					book==null || book.authors.size()<2 ? "" : "s",
-					book==null || book.authors.isEmpty() ? "---" : book.concatenateAuthors()
+					book==null || book.authors.isEmpty() ? "---" : Tools.getWithSideEffect( book.concatenateAuthors(), ()->highlighter.set(Field.Authors) )
 			));
-			fldPublisher  .setText("Publisher: %s" .formatted(book==null || book.publisher==null || book.publisher.name().isBlank() ? "---" : book.publisher.name()    ));
-			fldCatalogID  .setText("Catalog ID: %s".formatted(book==null || book.catalogID==null || book.catalogID.isBlank()        ? "---" : book.catalogID           ));
-			fldRelease    .setText("Release: %s"   .formatted(book==null || book.release  ==null || book.release  .isBlank()        ? "---" : book.release             ));
-			fldISBN       .setText("ISBN: %s"      .formatted(book==null || book.isbn     ==null || book.isbn     .isBlank()        ? "---" : book.isbn                ));
-			fldPrice      .setText("Price: %s"     .formatted(book==null || book.price==0                                           ? "---" : "%1.2f €".formatted(book.price)));
-			fldPageCount  .setText("Pages: %s"     .formatted(book==null || book.pagecount==0                                       ? "---" : book.pagecount           ));
+			fldPublisher  .setText("Publisher: %s" .formatted(book==null || book.publisher==null || book.publisher.name().isBlank() ? "---" : Tools.getWithSideEffect( book.publisher.name(), ()->highlighter.set(Field.Publisher) )));
+			fldCatalogID  .setText("Catalog ID: %s".formatted(book==null || book.catalogID==null || book.catalogID.isBlank()        ? "---" : Tools.getWithSideEffect( book.catalogID       , ()->highlighter.set(Field.CatalogID) )));
+			fldRelease    .setText("Release: %s"   .formatted(book==null || book.release  ==null || book.release  .isBlank()        ? "---" : Tools.getWithSideEffect( book.release         , ()->highlighter.set(Field.Release  ) )));
+			fldISBN       .setText("ISBN: %s"      .formatted(book==null || book.isbn     ==null || book.isbn     .isBlank()        ? "---" : Tools.getWithSideEffect( book.isbn            , ()->highlighter.set(Field.ISBN     ) )));
+			fldPrice      .setText("Price: %s"     .formatted(book==null || book.price==0                                           ? "---" : Tools.getWithSideEffect( "%1.2f €".formatted(book.price), ()->highlighter.set(Field.Price) )));
+			fldPageCount  .setText("Pages: %s"     .formatted(book==null || book.pagecount==0                                       ? "---" : Tools.getWithSideEffect( book.pagecount       , ()->highlighter.set(Field.PageCount) )));
 			fldCover      .setText("Cover: %s"     .formatted(
 					book==null
 						? "---"
-						: "%s%s%s".formatted(
-								book.backCover ==null ? "- " : "B",
-								book.spineCover==null ? "- " : "S",
-								book.frontCover==null ? "- " : "F"
+						: Tools.getWithSideEffect(
+								"%s%s%s".formatted(
+										book.backCover ==null ? "- " : "B",
+										book.spineCover==null ? "- " : "S",
+										book.frontCover==null ? "- " : "F"
+								),
+								()->{
+									if (book.backCover!=null && book.spineCover!=null && book.frontCover!=null)
+										highlighter.set(Field.Cover);
+								}
 						)
 			));
 			fldNotRead .setText(book==null || book.read  ? "" : "Not Read" );
@@ -285,21 +351,69 @@ class BooksTableCellRenderer implements TableCellRenderer
 			field.setText(prevStr);
 			return preferredSize;
 		}
+
+		private class Highlighter
+		{
+			private Predicate<Field> shouldBeHighlighted = f -> false;
+			private final EnumSet<Field> settedFields = EnumSet.noneOf(Field.class);
+			
+			void clear()
+			{
+				settedFields.clear();
+			}
+			
+			void set( InfoBlock.Field field )
+			{
+				settedFields.add(field);
+			}
+			
+			void update()
+			{
+				if (currentHighlightType!=null && currentHighlightType.shouldBeHighlighted!=null)
+					shouldBeHighlighted = currentHighlightType.shouldBeHighlighted;
+				else
+					shouldBeHighlighted = f->false;
+			}
+
+			boolean shouldBeHighlighted( InfoBlock.Field field )
+			{
+				return !rendConf.isSelected && shouldBeHighlighted.test(field);
+			}
+			
+			boolean isSet( InfoBlock.Field field )
+			{
+				return settedFields.contains(field);
+			}
+		}
 	}
 
 	private static class TextBox
 	{
+		private static final Color BGCOLOR_UNSETFIELD = new Color(0xFFDDDD);
+		private static final Color BGCOLOR_SETFIELD   = new Color(0xDDFFDD);
+		private final InfoBlock.Field field;
+		private final InfoBlock.Highlighter highlighter;
 		private String text;
 		private Font font;
 
-		TextBox()
+		TextBox(InfoBlock.Field field, InfoBlock.Highlighter highlighter)
 		{
+			this.field = field;
+			this.highlighter = highlighter;
 			text = "";
 			font = new JLabel().getFont();
 		}
 		
 		void paint(Graphics2D g2, int x, int y, int width, int height)
 		{
+			if (highlighter.shouldBeHighlighted(field))
+			{
+				Color prevColor = g2.getColor();
+				g2.setColor( highlighter.isSet(field) ? BGCOLOR_SETFIELD : BGCOLOR_UNSETFIELD );
+				g2.fillRect(x, y, width, height);
+				g2.setColor( prevColor );
+			}
+			
 			AdjustedText adjustedText = AdjustedText.compute(g2, font, text, width);
 			int textX = (int) Math.round( adjustedText.bounds.getX() );
 			int textY = (int) Math.round( adjustedText.bounds.getY() );

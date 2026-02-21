@@ -122,6 +122,12 @@ public class Tools
 			action.accept(value);
 	}
 	
+	public static <V> V getWithSideEffect(V value, Runnable sideEffect)
+	{
+		sideEffect.run();
+		return value;
+	}
+	
 	public static <V> V callChecked(String label, V replacement, Supplier<V> action)
 	{
 		try

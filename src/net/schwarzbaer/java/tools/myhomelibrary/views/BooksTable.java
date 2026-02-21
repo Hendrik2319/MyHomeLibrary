@@ -15,17 +15,15 @@ import net.schwarzbaer.java.tools.myhomelibrary.data.Book;
 public class BooksTable extends JTable
 {
 	private static final long serialVersionUID = -4421855766356160275L;
-	        final BooksTableModel tableModel;
-//	        final SimplifiedRowSorter tableRowSorter;
-	private final BooksTableCellRenderer tableCellRenderer;
-	        final JScrollPane tableScrollPane;
+	final BooksTableModel tableModel;
+	final BooksTableCellRenderer tableCellRenderer;
+	final JScrollPane tableScrollPane;
 
 	BooksTable()
 	{
 		setModel(tableModel = new BooksTableModel());
 		
 		setRowHeight(Book.FRONTCOVERTHUMB_MAXHEIGHT+6);
-		//setRowSorter(tableRowSorter = new Tables.SimplifiedRowSorter(tableModel));
 		setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
 		setColumnSelectionAllowed(false);
 		tableModel.setTable(this);

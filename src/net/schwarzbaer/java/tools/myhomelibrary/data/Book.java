@@ -56,9 +56,19 @@ public class Book implements UniqueID.IdBased<Book>
 		authors = new ArrayList<>();
 	}
 
+	public static boolean isBaseDataField(Field field)
+	{
+		return field==Field.Title || field==Field.Authors || field==Field.Publisher;
+	}
+
 	public boolean hasIncompleteBaseData()
 	{
 		return title==null || title.isBlank() || authors.isEmpty() || publisher==null;
+	}
+
+	public static boolean isExtraDataField(Field field)
+	{
+		return field==Field.Release || field==Field.ISBN || field==Field.Price || field==Field.PageCount;
 	}
 
 	public boolean hasIncompleteExtraData()
