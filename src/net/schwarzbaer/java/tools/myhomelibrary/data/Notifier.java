@@ -1,5 +1,6 @@
 package net.schwarzbaer.java.tools.myhomelibrary.data;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -14,6 +15,7 @@ public class Notifier
 	public final AuthorChangeController     authors    = new AuthorChangeController();
 	public final PublisherChangeController  publishers = new PublisherChangeController();
 	public final StorageController          storages   = new StorageController();
+	public final SettingsController         settings   = new SettingsController();
 	
 	public static class Controller<Listener>
 	{
@@ -67,6 +69,12 @@ public class Notifier
 	public static class StorageController extends Controller<StorageListener> implements StorageListener
 	{
 		@Override public void bookStorageLoaded(Object source) { forEach("bookStorageLoaded", source, l -> l.bookStorageLoaded(source)); }
+	}
+	
+	public static class SettingsController extends Controller<SettingsListener> implements SettingsListener
+	{
+		@Override public void browserExecSelected(Object source, File file          ) { forEach("browserExecSelected", source, l -> l.browserExecSelected(source, file)); }
+		@Override public void onlineLibSelected  (Object source, OnlineLibraryURL ol) { forEach("onlineLibSelected"  , source, l -> l.onlineLibSelected  (source, ol  )); }
 	}
 	
 	public interface BookChangeListener
@@ -132,6 +140,18 @@ public class Notifier
 		public static class Adapter implements StorageListener
 		{
 			@Override public void bookStorageLoaded(Object source) {}
+		}
+	}
+	
+	public interface SettingsListener
+	{
+		void browserExecSelected(Object source, File file          );
+		void onlineLibSelected  (Object source, OnlineLibraryURL ol);
+		
+		public static class Adapter implements SettingsListener
+		{
+			@Override public void browserExecSelected(Object source, File file          ) {}
+			@Override public void onlineLibSelected  (Object source, OnlineLibraryURL ol) {}
 		}
 	}
 }

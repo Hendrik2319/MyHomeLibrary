@@ -7,28 +7,35 @@ import net.schwarzbaer.java.tools.myhomelibrary.Tools;
 
 public enum OnlineLibraryURL
 {
-	DeutscheNationalbibliothek("Deutsche Nationalbibliothek",
+	DeutscheNationalbibliothek("DNB", "Deutsche Nationalbibliothek",
 			b -> Tools.getIfNotNull(
 					getISBNNumbers(b),
 					null,
 					isbn -> "https://portal.dnb.de/opac/simpleSearch?query=num+all+%22"+isbn+"%22&cqlMode=true"
 			)
 	),
-	Amazon("Amazon (de)",
+	BritishLibrary("British Library", "British Library",
+			b -> Tools.getIfNotNull(
+					getISBNNumbers(b),
+					null,
+					isbn -> "https://catalogue.bl.uk/nde/search?query="+isbn+"&tab=Everything&search_scope=MyInst_and_CI&searchInFulltext=false&vid=44BL_MAIN:BLL01_NDE"
+			)
+	),
+	Amazon("Amazon", "Amazon (de)",
 			b -> Tools.getIfNotNull(
 					getISBNNumbers(b),
 					null,
 					isbn -> "https://www.amazon.de/s?search-alias=stripbooks&field-keywords="+isbn
 			)
 	),
-	Thalia("Thalia (de)",
+	Thalia("Thalia", "Thalia (de)",
 			b -> Tools.getIfNotNull(
 					b.isbn,
 					null,
 					isbn -> "https://www.thalia.de/suche?sq="+isbn+"&keepTerm=true"
 			)
 	),
-	Wikipedia("Wikipedia (de) - ISBN-Suche",
+	Wikipedia("Wikipedia", "Wikipedia (de) - ISBN-Suche",
 			b -> Tools.getIfNotNull(
 					getISBNNumbers(b),
 					null,
@@ -36,13 +43,15 @@ public enum OnlineLibraryURL
 			)
 	),
 	;
+	public final String shortTitle;
 	public final String title;
 	public final Function<Book, String> buildURL;
 
-	OnlineLibraryURL(String title, Function<Book,String> buildURL)
+	OnlineLibraryURL(String shortTitle, String title, Function<Book,String> buildURL)
 	{
-		this.title    = Objects.requireNonNull(title);
-		this.buildURL = Objects.requireNonNull(buildURL);
+		this.shortTitle = Objects.requireNonNull(shortTitle);
+		this.title      = Objects.requireNonNull(title     );
+		this.buildURL   = Objects.requireNonNull(buildURL  );
 	}
 
 	@Override

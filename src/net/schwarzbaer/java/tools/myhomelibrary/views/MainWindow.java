@@ -67,16 +67,24 @@ public class MainWindow extends StandardMainWindow
 			
 			mnSettings.add(Tools.createMenuItem("Set Path to Browser", true, null, e -> {
 				File file = GlobalSettings.getInstance().askUserForExecutable(MainWindow.this, "Select Browser", GlobalSettings.Key.Browser);
-				if (file!=null) System.out.printf("Path to Browser was set to \"%s\"%n", file.getAbsolutePath());
+				if (file!=null)
+				{
+					System.out.printf("Path to Browser was set to \"%s\"%n", file.getAbsolutePath());
+					main.notifier.settings.browserExecSelected(MainWindow.this, file);
+				}
 			}));
 			
 			mnSettings.add(mnOnlineLibrary = new JMenu("Online Library"));
 			
 			ButtonGroup bg = new ButtonGroup();
-			OnlineLibraryURL onlineLibrary = Tools.getOnlineLibrary();
+			OnlineLibraryURL currentOnlineLibrary = Tools.getOnlineLibrary();
 			for (OnlineLibraryURL ol : OnlineLibraryURL.values())
-				mnOnlineLibrary.add(Tools.createCheckBoxMenuItem(ol.title, true, ol==onlineLibrary, bg, null, b -> {
-					if (b) Tools.setOnlineLibrary(ol);
+				mnOnlineLibrary.add(Tools.createCheckBoxMenuItem(ol.title, true, ol==currentOnlineLibrary, bg, null, b -> {
+					if (b)
+					{
+						Tools.setOnlineLibrary(ol);
+						main.notifier.settings.onlineLibSelected(MainWindow.this, ol);
+					}
 				}));
 			
 			

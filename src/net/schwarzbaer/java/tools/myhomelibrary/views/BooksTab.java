@@ -1,6 +1,7 @@
 package net.schwarzbaer.java.tools.myhomelibrary.views;
 
 import java.awt.BorderLayout;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -100,13 +101,13 @@ class BooksTab extends JSplitPane
 		this.main.notifier.books.addListener(new Notifier.BookChangeListener() {
 			@Override public void fieldChanged(Object source, Book book, Field field)
 			{
-				if (field == Field.ISBN) lowerToolBar.updateElements();
+				if (field == Field.ISBN) lowerToolBar.updateBtnShowISBN();
 				table.tableModel.fireColumnUpdateForField(field);
 				BooksTab.this.main.bookStorage.writeToFile();
 			}
 			@Override public void fieldsChanged(Object source, Set<Book> books, Set<Field> fields)
 			{
-				if (fields.contains( Field.ISBN )) lowerToolBar.updateElements();
+				if (fields.contains( Field.ISBN )) lowerToolBar.updateBtnShowISBN();
 				table.tableModel.fireColumnUpdateForFields(fields);
 				BooksTab.this.main.bookStorage.writeToFile();
 			}
@@ -485,6 +486,11 @@ class BooksTab extends JSplitPane
 				
 				Tools.showURLInBrowser(main.mainWindow, onlineLibrary.buildURL.apply(row));
 			}));
+			
+			main.notifier.settings.addListener(new Notifier.SettingsListener() {
+				@Override public void browserExecSelected(Object source, File file          ) { updateBtnShowISBN(); }
+				@Override public void onlineLibSelected  (Object source, OnlineLibraryURL ol) { updateBtnShowISBN(); }
+			});
 		}
 
 		private Book getSelectedRow()
@@ -497,10 +503,30 @@ class BooksTab extends JSplitPane
 
 		public void updateElements()
 		{
-			Book row = getSelectedRow();
+			Book selectedBook = getSelectedRow();
 			btnAdd     .setEnabled(currentSelector!=null);
-			btnRemove  .setEnabled(currentSelector!=null && row!=null);
-			btnShowISBN.setEnabled(currentSelector!=null && row!=null && row.isbn!=null && Tools.isBrowserSet());
+			btnRemove  .setEnabled(currentSelector!=null && selectedBook!=null);
+			updateBtnShowISBN(selectedBook);
+		}
+
+		private void updateBtnShowISBN()
+		{
+			updateBtnShowISBN( getSelectedRow() );
+		}
+
+		private void updateBtnShowISBN(Book selectedBook)
+		{
+			OnlineLibraryURL ol = Tools.getOnlineLibrary();
+			btnShowISBN.setEnabled(
+					selectedBook!=null && selectedBook.isbn!=null &&
+					Tools.isBrowserSet() &&
+					ol!=null
+			);
+			btnShowISBN.setText(
+					ol == null
+						? "Show Book (ISBN) in online library"
+						: "Show Book (ISBN) in \"%s\"".formatted(ol.shortTitle)
+			);
 		}
 	}
 }
