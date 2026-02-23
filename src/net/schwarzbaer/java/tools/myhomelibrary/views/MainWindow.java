@@ -12,6 +12,7 @@ import net.schwarzbaer.java.lib.globalsettings.GlobalSettings;
 import net.schwarzbaer.java.lib.gui.GeneralIcons.GrayCommandIcons;
 import net.schwarzbaer.java.lib.gui.ProgressDialog;
 import net.schwarzbaer.java.lib.gui.StandardMainWindow;
+import net.schwarzbaer.java.lib.system.ClipboardTools;
 import net.schwarzbaer.java.lib.system.Settings.DefaultAppSettings.SplitPaneDividersDefinition;
 import net.schwarzbaer.java.tools.myhomelibrary.MyHomeLibrary;
 import net.schwarzbaer.java.tools.myhomelibrary.MyHomeLibrary.AppSettings.ValueKey;
@@ -60,6 +61,7 @@ public class MainWindow extends StandardMainWindow
 		private final JMenu mnSettings;
 		private final JMenu mnCleanUp;
 		private final JMenu mnOnlineLibrary;
+		private final JMenu mnData;
 		
 		MenuBar()
 		{
@@ -106,6 +108,22 @@ public class MainWindow extends StandardMainWindow
 				List<Publisher> deleted = main.bookStorage.deleteUnusedPublishers();
 				main.notifier.publishers.deleted(MainWindow.this, deleted);
 				main.bookStorage.writeToFile();
+			}));
+			
+			
+			mnData = add(new JMenu("Data"));
+			
+			mnData.add(Tools.createMenuItem("Copy book data (id, release, price, page count) to clipboard", true, GrayCommandIcons.IconGroup.Copy, e -> {
+				StringBuilder sb = new StringBuilder();
+				sb.append("\"%s\"\t\"%s\"\t\"%s\"\t\"%s\"%n".formatted( "id", "release", "price", "page count" ));
+				main.bookStorage.getListOfBooks().forEach(b -> {
+					if (b.id       ==null) return;
+					if (b.release  ==0) return;
+					if (b.price    ==0) return;
+					if (b.pagecount==0) return;
+					sb.append("\"%s\"\t%s\t%s\t%s%n".formatted( b.id, b.release, b.price, b.pagecount ));
+				});
+				ClipboardTools.copyToClipBoard(sb.toString());
 			}));
 		}
 	}
