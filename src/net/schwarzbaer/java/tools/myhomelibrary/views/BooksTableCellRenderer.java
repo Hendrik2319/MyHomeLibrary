@@ -298,9 +298,9 @@ class BooksTableCellRenderer implements TableCellRenderer
 			));
 			fldPublisher  .setText("Publisher: %s" .formatted(book==null || book.publisher==null || book.publisher.name().isBlank() ? "---" : Tools.getWithSideEffect( book.publisher.name(), ()->highlighter.set(Field.Publisher) )));
 			fldCatalogID  .setText("Catalog ID: %s".formatted(book==null || book.catalogID==null || book.catalogID.isBlank()        ? "---" : Tools.getWithSideEffect( book.catalogID       , ()->highlighter.set(Field.CatalogID) )));
-			fldRelease    .setText("Release: %s"   .formatted(book==null || book.release  ==null || book.release  .isBlank()        ? "---" : Tools.getWithSideEffect( book.release         , ()->highlighter.set(Field.Release  ) )));
+			fldRelease    .setText("Release: %s"   .formatted(book==null || book.release  ==0                                       ? "---" : Tools.getWithSideEffect( book.release         , ()->highlighter.set(Field.Release  ) )));
 			fldISBN       .setText("ISBN: %s"      .formatted(book==null || book.isbn     ==null || book.isbn     .isBlank()        ? "---" : Tools.getWithSideEffect( book.isbn            , ()->highlighter.set(Field.ISBN     ) )));
-			fldPrice      .setText("Price: %s"     .formatted(book==null || book.price==0                                           ? "---" : Tools.getWithSideEffect( "%1.2f €".formatted(book.price), ()->highlighter.set(Field.Price) )));
+			fldPrice      .setText("Price: %s"     .formatted(book==null || book.price    ==0                                       ? "---" : Tools.getWithSideEffect( "%1.2f €".formatted(book.price), ()->highlighter.set(Field.Price) )));
 			fldPageCount  .setText("Pages: %s"     .formatted(book==null || book.pagecount==0                                       ? "---" : Tools.getWithSideEffect( book.pagecount       , ()->highlighter.set(Field.PageCount) )));
 			fldCover      .setText("Cover: %s"     .formatted(
 					book==null

@@ -35,7 +35,7 @@ public class Book implements UniqueID.IdBased<Book>
 	public BookSeries bookSeries = null;
 	
 	// extra data
-	public String     release    = null;
+	public int        release    = 0;
 	public String     isbn       = null;
 	public double     price      = 0;
 	public int        pagecount  = 0;
@@ -73,7 +73,7 @@ public class Book implements UniqueID.IdBased<Book>
 
 	public boolean hasIncompleteExtraData()
 	{
-		return release==null || isbn==null || price==0 || pagecount==0;
+		return release==0 || isbn==null || price==0 || pagecount==0;
 	}
 
 	public boolean hasIncompleteCover()

@@ -143,7 +143,7 @@ class BookPanel extends JPanel
 		guiConfigurator = new Tools.GUIConfigurator( fldTitle.getForeground(), fldTitle.getBackground() );
 		guiConfigurator.configureStringField(fldTitle      , str -> !str.isBlank()                , str -> Tools.doIfNotNull(currentBook, b -> { b.title     = str; this.main.notifier.books.fieldChanged(this, b, Field.Title    ); }));
 		guiConfigurator.configureStringField(fldCatalogID  , null                                 , str -> Tools.doIfNotNull(currentBook, b -> { b.catalogID = str; this.main.notifier.books.fieldChanged(this, b, Field.CatalogID); }));
-		guiConfigurator.configureStringField(fldRelease    , null                                 , str -> Tools.doIfNotNull(currentBook, b -> { b.release   = str; this.main.notifier.books.fieldChanged(this, b, Field.Release  ); }));
+		guiConfigurator.configureIntField   (fldRelease    , val -> val >= 1900                   , val -> Tools.doIfNotNull(currentBook, b -> { b.release   = val; this.main.notifier.books.fieldChanged(this, b, Field.Release  ); }));
 		guiConfigurator.configureStringField(fldISBN       , null                                 , str -> Tools.doIfNotNull(currentBook, b -> { b.isbn      = str; this.main.notifier.books.fieldChanged(this, b, Field.ISBN     ); }));
 		guiConfigurator.configureDoubleField(fldPrice      , val -> Double.isFinite(val) && val>=0, val -> Tools.doIfNotNull(currentBook, b -> { b.price     = val; this.main.notifier.books.fieldChanged(this, b, Field.Price    ); }));
 		guiConfigurator.configureIntField   (fldPageCount  , val -> val >= 0                      , val -> Tools.doIfNotNull(currentBook, b -> { b.pagecount = val; this.main.notifier.books.fieldChanged(this, b, Field.PageCount); }));
@@ -295,7 +295,7 @@ class BookPanel extends JPanel
 		guiConfigurator.setText(fldTitle        , Tools.getIfNotNull(currentBook, "", b -> b.title));
 		guiConfigurator.setText(fldAuthors      , Tools.getIfNotNull(currentBook, "", b -> b.concatenateAuthors()));
 		guiConfigurator.setText(fldBookSeriesPos, Tools.getIfNotNull(currentBook, "", b -> Tools.getIfNotNull(b.bookSeries, "", bs -> Tools.toOrdinalString(bs.books.indexOf(b)+1) )));
-		guiConfigurator.setText(fldRelease      , Tools.getIfNotNull(currentBook, "", b -> b.release  ));
+		guiConfigurator.setText(fldRelease      , Tools.getIfNotNull(currentBook, "", b -> b.release  ==0 ? "" : Integer.toString(b.release  )));
 		guiConfigurator.setText(fldCatalogID    , Tools.getIfNotNull(currentBook, "", b -> b.catalogID));
 		guiConfigurator.setText(fldISBN         , Tools.getIfNotNull(currentBook, "", b -> b.isbn     ));
 		guiConfigurator.setText(fldPrice        , Tools.getIfNotNull(currentBook, "", b -> b.price    ==0 ? "" : Double .toString(b.price    )));

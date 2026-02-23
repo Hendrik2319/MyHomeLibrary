@@ -379,7 +379,7 @@ public class BookStorage
 					if ((valueStr = getLineValue(line, Field.title      ))!=null) currentBook.title       = valueStr;
 					if ((valueStr = getLineValue(line, Field.bookSeries ))!=null) currentBook.bookSeries  = bookSeries.get(valueStr);
 					if ((valueStr = getLineValue(line, Field.author     ))!=null) currentBook.authors     .add(getOrCreateAuthor(valueStr));
-					if ((valueStr = getLineValue(line, Field.release    ))!=null) currentBook.release     = valueStr;
+					if ((valueStr = getLineValue(line, Field.release    ))!=null) currentBook.release     = parseInt(valueStr);
 					if ((valueStr = getLineValue(line, Field.publisher  ))!=null) currentBook.publisher   = getOrCreatePublisher(valueStr);
 					if ((valueStr = getLineValue(line, Field.catalogID  ))!=null) currentBook.catalogID   = valueStr;
 					if ((valueStr = getLineValue(line, Field.isbn       ))!=null) currentBook.isbn        = valueStr;
@@ -485,7 +485,7 @@ public class BookStorage
 				if (b.title      !=null) out.printf("%s = %s%n", Field.title      , b.title        );
 				if (b.bookSeries !=null) out.printf("%s = %s%n", Field.bookSeries , b.bookSeries.id);
 				b.authors.forEach(a ->   out.printf("%s = %s%n", Field.author     , a.name()       ));
-				if (b.release    !=null) out.printf("%s = %s%n", Field.release    , b.release      );
+				if (b.release    != 0  ) out.printf("%s = %s%n", Field.release    , b.release      );
 				if (b.publisher  !=null) out.printf("%s = %s%n", Field.publisher  , b.publisher    );
 				if (b.catalogID  !=null) out.printf("%s = %s%n", Field.catalogID  , b.catalogID    );
 				if (b.isbn       !=null) out.printf("%s = %s%n", Field.isbn       , b.isbn         );

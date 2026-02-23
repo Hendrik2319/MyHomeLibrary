@@ -241,8 +241,12 @@ class BooksTab extends JSplitPane
 				.<Book,String>comparing(b -> b.catalogID, Comparator.nullsLast(Comparator.naturalOrder()))
 				.thenComparing(COMPARATOR__BY_NAME)
 		),
+		ISBN     ("Order by ISBN", Comparator
+				.<Book,String>comparing(b -> b.isbn, Comparator.nullsLast(Comparator.naturalOrder()))
+				.thenComparing(COMPARATOR__BY_NAME)
+		),
 		Release  ("Order by Release", Comparator
-				.<Book,String>comparing(b -> b.release, Comparator.nullsLast(Comparator.naturalOrder()))
+				.<Book,Integer>comparing(b -> b.release==0 ? Integer.MAX_VALUE : b.release)
 				.thenComparing(COMPARATOR__BY_NAME)
 		),
 		BookSeries ("Order by Book Series", Comparator
