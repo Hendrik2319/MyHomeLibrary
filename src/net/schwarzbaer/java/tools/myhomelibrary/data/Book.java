@@ -9,7 +9,7 @@ import java.util.stream.Collectors;
 import net.schwarzbaer.java.lib.gui.ImageView;
 import net.schwarzbaer.java.tools.myhomelibrary.FileIO;
 
-public class Book implements UniqueID.IdBased<Book>
+public class Book implements IdBased<Book>
 {
 	public static final int FRONTCOVERTHUMB_MAXWIDTH  = 60;
 	public static final int FRONTCOVERTHUMB_MAXHEIGHT = 90;

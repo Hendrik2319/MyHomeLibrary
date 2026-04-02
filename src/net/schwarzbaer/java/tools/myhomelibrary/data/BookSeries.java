@@ -3,7 +3,7 @@ package net.schwarzbaer.java.tools.myhomelibrary.data;
 import java.util.Objects;
 import java.util.Vector;
 
-public class BookSeries implements UniqueID.IdBased<BookSeries>
+public class BookSeries implements IdBased<BookSeries>
 {
 	public enum Field {
 		Name, Books

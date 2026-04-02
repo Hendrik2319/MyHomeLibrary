@@ -18,6 +18,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 
 import net.schwarzbaer.java.lib.gui.ProgressDialog;
+import net.schwarzbaer.java.lib.system.UniqueStringID;
 import net.schwarzbaer.java.tools.myhomelibrary.FileIO;
 import net.schwarzbaer.java.tools.myhomelibrary.FileIO.FileIOException;
 import net.schwarzbaer.java.tools.myhomelibrary.MyHomeLibrary;
@@ -29,8 +30,8 @@ public class BookStorage
 	public  static final int LENGTH_BOOKSERIES_ID = 4;
 	private static final String HEADER_BOOK = "[Book]";
 	private static final String HEADER_BOOK_SERIES = "[BookSeries]";
-	private static final UniqueID bookIDs       = new UniqueID(LENGTH_BOOK_ID      );
-	private static final UniqueID bookSeriesIDs = new UniqueID(LENGTH_BOOKSERIES_ID);
+	private static final UniqueStringID bookIDs       = new UniqueStringID(LENGTH_BOOK_ID      );
+	private static final UniqueStringID bookSeriesIDs = new UniqueStringID(LENGTH_BOOKSERIES_ID);
 	
 	private final MyHomeLibrary main;
 	private final Map<String,Book> books;
@@ -210,12 +211,12 @@ public class BookStorage
 		return createIdBased(bookSeries, BookSeries::new, bookSeriesIDs);
 	}
 	
-	private <V extends UniqueID.IdBased<V>> V createIdBased(Map<String,V> map, Function<String,V> constructor, UniqueID idSource)
+	private <V extends IdBased<V>> V createIdBased(Map<String,V> map, Function<String,V> constructor, UniqueStringID idSource)
 	{
 		return createIdBased(map, constructor, idSource.createNew());
 	}
 	
-	private <V extends UniqueID.IdBased<V>> V createIdBased(Map<String,V> map, Function<String,V> constructor, String id)
+	private <V extends IdBased<V>> V createIdBased(Map<String,V> map, Function<String,V> constructor, String id)
 	{
 		V value = constructor.apply(id);
 		map.put(id, value);
